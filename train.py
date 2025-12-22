@@ -250,6 +250,31 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--eval", action="store_true")
     parser.add_argument("--checkpoint", type=str)
+
+    parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=10_000_000,
+        help="Total number of timesteps for training",
+    )
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        default=5e-4,
+        help="Learning rate for the optimizer",
+    )
+    parser.add_argument(
+        "--n-steps",
+        type=int,
+        default=2048,
+        help="Number of steps to run for each environment per update",
+    )
+    parser.add_argument(
+        "--n-epochs",
+        type=int,
+        default=4,
+        help="Number of epochs to run when optimizing the surrogate loss",
+    )
     args = parser.parse_args()
 
     if args.eval:
@@ -258,11 +283,11 @@ if __name__ == "__main__":
         evaluate(args.checkpoint, n_episodes=10, time_scale=1.0)
     else:
         train(
-            total_timesteps=10_000_000,
-            learning_rate=5e-4,
-            n_steps=2048,
+            total_timesteps=args.total_timesteps,
+            learning_rate=args.learning_rate,
+            n_steps=args.n_steps,
             batch_size=512,
-            n_epochs=4,
+            n_epochs=args.n_epochs,
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.1,
