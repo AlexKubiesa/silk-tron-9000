@@ -64,5 +64,5 @@ uv run train.py --eval --checkpoint ./models/rl_model_1000_steps.zip
 ### Tensorboard
 
 ```bash
-tensorboard --logdir ./logs
+uv run tensorboard --logdir ./logs
 ```
