@@ -6,13 +6,12 @@ from typing import Union
 import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
-from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 import torch
 from torch import nn
 
 
-from silk_tron.env import SilksongBossEnv
+from silk_tron.env import MyMonitor, SilksongBossEnv
 from silk_tron.networks import MultiHeadFeatureExtractor, TensorboardCallback
 
 
@@ -25,7 +24,7 @@ def make_env(time_scale: float = 1.0, no_fx: bool = False):
     torch.set_num_threads(1)
 
     env = SilksongBossEnv(time_scale=time_scale, no_fx=no_fx)
-    env = Monitor(env)
+    env = MyMonitor(env)
     return env
 
 

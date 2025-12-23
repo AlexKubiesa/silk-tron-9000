@@ -1,6 +1,9 @@
+from collections import defaultdict
+from typing import Optional
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+from stable_baselines3.common.monitor import Monitor
 from silk_tron.constants import (
     BOSS_MAX_HEALTH,
     MAX_EPISODE_STEPS,
@@ -44,7 +47,8 @@ class SilksongBossEnv(gym.Env):
         self.prev_attack = 0
 
         observation = game_state.to_observation()
-        info = self._get_info(game_state)
+        reward, reward_components = self._default_reward()
+        info = self._get_info(game_state, reward_components)
 
         return observation, info
 
@@ -59,7 +63,7 @@ class SilksongBossEnv(gym.Env):
             print(f"[Env] {e}")
             return self._handle_timeout()
 
-        reward = self._calculate_reward(game_state)
+        reward, reward_components = self._calculate_reward(game_state)
 
         self.episode_reward += reward
         self.lowest_boss_hp = min(self.lowest_boss_hp, game_state.boss_health)
@@ -73,7 +77,7 @@ class SilksongBossEnv(gym.Env):
         self.prev_player_health = game_state.player_health
         self.prev_player_silk = game_state.player_silk
 
-        info = self._get_info(game_state, terminated or truncated)
+        info = self._get_info(game_state, reward_components, terminated or truncated)
 
         return observation, reward, terminated, truncated, info
 
@@ -87,23 +91,31 @@ class SilksongBossEnv(gym.Env):
         self.prev_player_silk = game_state.player_silk
 
         observation = game_state.to_observation()
-        info = self._get_info(game_state, episode_end=True)
+        reward, reward_components = self._calculate_reward(game_state)
+        info = self._get_info(game_state, reward_components, episode_end=True)
         info["timeout_restart"] = True
 
         return observation, 0.0, False, True, info
 
-    def _calculate_reward(self, game_state: GameState) -> float:
+    def _calculate_reward(
+        self, game_state: GameState
+    ) -> tuple[float, dict[str, float]]:
+        components = {}
+
         boss_dmg = self.prev_boss_health - game_state.boss_health
         player_dmg = self.prev_player_health - game_state.player_health
 
-        reward = 0.0
-
         if boss_dmg > 0:
-            reward += boss_dmg / BOSS_MAX_HEALTH
+            components["boss_damage"] = boss_dmg / BOSS_MAX_HEALTH
             self.attack_count += 1
+        else:
+            components["boss_damage"] = 0.0
+
         if player_dmg > 0:
-            reward -= (player_dmg / PLAYER_MAX_HEALTH) * 0.2
+            components["player_damage"] = -(player_dmg / PLAYER_MAX_HEALTH) * 0.2
             self.hurt_count += 1
+        else:
+            components["player_damage"] = 0.0
 
         distance = np.sqrt(
             (game_state.player_pos_x - game_state.boss_pos_x) ** 2
@@ -113,15 +125,26 @@ class SilksongBossEnv(gym.Env):
         too_far = distance > 15.0
         too_close = distance < 1.0
 
-        if too_far:
-            reward -= 0.001
-        elif too_close:
-            reward -= 0.001
+        components["too_far"] = -0.001 if too_far else 0.0
+        components["too_close"] = -0.001 if too_close else 0.0
 
-        if boss_dmg == 0 and player_dmg == 0:
-            reward -= 0.0001
+        stalling = boss_dmg == 0 and player_dmg == 0
+        components["stalling"] = -0.0001 if stalling else 0.0
 
-        return reward
+        reward = sum(c for c in components.values())
+
+        return reward, components
+
+    def _default_reward(self):
+        reward = 0.0
+        components = {
+            "boss_damage": 0.0,
+            "player_damage": 0.0,
+            "too_far": 0.0,
+            "too_close": 0.0,
+            "stalling": 0.0,
+        }
+        return reward, components
 
     def _is_terminated(self, game_state: GameState) -> bool:
         return game_state.boss_health <= 0 or game_state.player_health <= 0
@@ -131,7 +154,12 @@ class SilksongBossEnv(gym.Env):
             return True
         return game_state.truncated
 
-    def _get_info(self, game_state: GameState, episode_end: bool = False) -> dict:
+    def _get_info(
+        self,
+        game_state: GameState,
+        reward_components: dict[str, float],
+        episode_end: bool = False,
+    ) -> dict:
         info = {
             "player_health": game_state.player_health,
             "boss_health": game_state.boss_health,
@@ -140,6 +168,7 @@ class SilksongBossEnv(gym.Env):
             "total_steps": self.total_steps,
             "player_pos": (game_state.player_pos_x, game_state.player_pos_y),
             "boss_pos": (game_state.boss_pos_x, game_state.boss_pos_y),
+            "reward": reward_components,
         }
 
         if episode_end:
@@ -185,3 +214,39 @@ class SilksongBossEnv(gym.Env):
         if hasattr(self, "shm") and self.shm is not None:
             self.shm.close()
             self.shm = None
+
+
+class MyMonitor(Monitor):
+    def __init__(
+        self,
+        env: gym.Env,
+        filename: Optional[str] = None,
+        allow_early_resets: bool = True,
+        reset_keywords: tuple[str, ...] = (),
+        info_keywords: tuple[str, ...] = (),
+        override_existing: bool = True,
+    ):
+        super().__init__(
+            env=env,
+            filename=filename,
+            allow_early_resets=allow_early_resets,
+            reset_keywords=reset_keywords,
+            info_keywords=info_keywords,
+            override_existing=override_existing,
+        )
+        self.reward_components = defaultdict(list)
+
+    def reset(self, **kwargs):
+        self.reward_components = defaultdict(list)
+        return super().reset(**kwargs)
+
+    def step(self, action):
+        observation, reward, terminated, truncated, info = super().step(action)
+        if (reward_components := info.get("reward")) is not None:
+            for name, val in reward_components.items():
+                self.reward_components[name].append(val)
+        if (terminated or truncated) and ((ep_info := info.get("episode")) is not None):
+            ep_info["reward_components"] = {
+                name: sum(vals) for name, vals in self.reward_components.items()
+            }
+        return observation, reward, terminated, truncated, info

@@ -1,4 +1,5 @@
-from collections import deque
+from collections import defaultdict, deque
+from functools import partial
 
 import numpy as np
 import torch
@@ -124,6 +125,7 @@ class TensorboardCallback(BaseCallback):
         self.attack_counts = deque(maxlen=buffer_size)
         self.hurt_counts = deque(maxlen=buffer_size)
         self.lowest_boss_hps = deque(maxlen=buffer_size)
+        self.reward_components = defaultdict(partial(deque, maxlen=buffer_size))
 
     def _on_step(self) -> bool:
         for i, info in enumerate(self.locals.get("infos", [])):
@@ -148,5 +150,13 @@ class TensorboardCallback(BaseCallback):
                     "episode/lowest_boss_hp_mean", np.mean(self.lowest_boss_hps)
                 )
                 self.logger.record("episode/highest_reward", self.highest_reward)
+
+            if (ep_info := info.get("episode")) is not None:
+                if (reward_components := ep_info.get("reward_components")) is not None:
+                    for name, val in reward_components.items():
+                        self.reward_components[name].append(val)
+
+        for name, vals in self.reward_components.items():
+            self.logger.record(f"rollout/ep_rew_cpt_means/{name}", np.mean(vals))
 
         return True
