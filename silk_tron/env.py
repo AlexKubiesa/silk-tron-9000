@@ -154,19 +154,19 @@ class SilksongBossEnv(gym.Env):
     def _convert_to_binary(self, action: np.ndarray) -> np.ndarray:
         binary = np.zeros(10, dtype=np.int8)
 
-        if action[0] == 1:
+        if action[0] == 1:  # left
             binary[0] = 1
-        elif action[0] == 2:
+        elif action[0] == 2:  # right
             binary[1] = 1
 
-        if action[1] == 1:
+        if action[1] == 1:  # up
             binary[2] = 1
-        elif action[1] == 2:
+        elif action[1] == 2:  # down
             binary[3] = 1
 
-        binary[4] = action[2]
+        binary[4] = action[2]  # jump
 
-        binary[5] = action[3]
+        binary[5] = action[3]  # attack
 
         if self.prev_attack == 1:
             binary[5] = 0
@@ -174,10 +174,10 @@ class SilksongBossEnv(gym.Env):
             binary[5] = action[3]
         self.prev_attack = binary[5]
 
-        binary[6] = action[4]
-        binary[7] = action[5]
-        binary[8] = action[6]
-        binary[9] = action[7]
+        binary[6] = action[4]  # dash
+        binary[7] = action[5]  # clawline
+        binary[8] = action[6]  # skill
+        binary[9] = action[7]  # heal
 
         return binary
 
