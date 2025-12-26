@@ -51,6 +51,7 @@ def train(
     time_scale: float = 4.0,
     device: Union[torch.device, str] = "cpu",
     no_fx: bool = False,
+    seed: int | None = None,
 ):
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
@@ -120,6 +121,8 @@ def train(
         )
     else:
         print("\nInitializing new PPO model...")
+        if seed is not None:
+            torch.manual_seed(seed)
         model = PPO(
             policy="MlpPolicy",
             env=env,
@@ -274,6 +277,12 @@ if __name__ == "__main__":
         default=4,
         help="Number of epochs to run when optimizing the surrogate loss",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=123,
+        help="Random number generator seed for policy network reproducibility. The environment is not affected by the random seed. The seed is ignored if continuing from a checkpoint.",
+    )
     args = parser.parse_args()
 
     if args.eval:
@@ -297,4 +306,5 @@ if __name__ == "__main__":
             time_scale=4.0,
             device="cpu",
             no_fx=True,
+            seed=args.seed,
         )
