@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 from silk_tron.constants import (
@@ -160,3 +160,27 @@ class TensorboardCallback(BaseCallback):
             self.logger.record(f"rollout/ep_rew_cpt_means/{name}", np.mean(vals))
 
         return True
+
+
+class CustomCheckpointCallback(CheckpointCallback):
+    """Extended checkpoint callback that also saves RNG states."""
+
+    def _on_step(self) -> bool:
+        super()._on_step()
+
+        if self.n_calls % self.save_freq == 0:
+            rng_path = self._checkpoint_path("rng_state_", "zip")
+            self._save_rng_state(rng_path)
+
+        return True
+
+    def _save_rng_state(self, rng_path: str):
+        """Save PyTorch and NumPy RNG states alongside a checkpoint."""
+        rng_state = {
+            "numpy": np.random.get_state(),
+            "torch": torch.get_rng_state(),
+        }
+
+        torch.save(rng_state, rng_path)
+        if self.verbose >= 2:
+            print(f"Saved RNG state to {rng_path}")

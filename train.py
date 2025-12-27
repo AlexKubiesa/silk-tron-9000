@@ -14,7 +14,11 @@ import json
 
 
 from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
-from silk_tron.networks import MultiHeadFeatureExtractor, TensorboardCallback
+from silk_tron.networks import (
+    MultiHeadFeatureExtractor,
+    TensorboardCallback,
+    CustomCheckpointCallback,
+)
 
 
 load_dotenv(Path(__file__).parent / ".env")
@@ -50,25 +54,65 @@ def save_config(config_path: str, **kwargs):
         json.dump(kwargs, f, indent=2)
 
 
-def load_config(config_path: str) -> dict:
-    """Load training configuration from JSON file."""
-    with open(config_path, "r") as f:
-        return json.load(f)
-
-
 def find_vecnormalize_path(checkpoint_path: str) -> str | None:
-    """Find the corresponding VecNormalize file for a checkpoint.
-
-    Assumes new run-based structure: checkpoints/step_XXXXX.zip -> checkpoints/step_XXXXX_vecnormalize.pkl
-    """
+    """Find the corresponding VecNormalize file for a checkpoint."""
     checkpoint_path_obj = Path(checkpoint_path)
-    stem = checkpoint_path_obj.stem  # e.g., "step_010000" or "final"
-    vecnorm_path = checkpoint_path_obj.parent / f"{stem}_vecnormalize.pkl"
+    stem = checkpoint_path_obj.stem
+
+    vecnorm_stem = stem.replace("rl_model_", "rl_model_vecnormalize_", 1)
+    vecnorm_path = checkpoint_path_obj.parent / f"{vecnorm_stem}.pkl"
 
     if vecnorm_path.exists():
         return str(vecnorm_path)
 
     return None
+
+
+def save_rng_state(checkpoint_path: str):
+    """Save PyTorch and NumPy RNG states alongside a checkpoint.
+
+    Args:
+        checkpoint_path: Path to the model checkpoint (e.g., checkpoints/rl_model_10000_steps.zip)
+    """
+    checkpoint_path_obj = Path(checkpoint_path)
+    stem = checkpoint_path_obj.stem
+
+    rng_stem = stem.replace("rl_model_", "rl_model_rng_state_", 1)
+    rng_path = checkpoint_path_obj.parent / f"{rng_stem}.zip"
+
+    rng_state = {
+        "numpy": np.random.get_state(),
+        "torch": torch.get_rng_state(),
+    }
+
+    torch.save(rng_state, rng_path)
+    return str(rng_path)
+
+
+def load_rng_state(checkpoint_path: str) -> bool:
+    """Load PyTorch and NumPy RNG states from a checkpoint.
+
+    Args:
+        checkpoint_path: Path to the model checkpoint
+
+    Returns:
+        True if RNG state was found and loaded, False otherwise
+    """
+    checkpoint_path_obj = Path(checkpoint_path)
+    stem = checkpoint_path_obj.stem
+
+    rng_stem = stem.replace("rl_model_", "rl_model_rng_state_", 1)
+    rng_path = checkpoint_path_obj.parent / f"{rng_stem}.zip"
+
+    if not rng_path.exists():
+        return False
+
+    rng_state = torch.load(rng_path, weights_only=False)
+
+    np.random.set_state(rng_state["numpy"])
+    torch.set_rng_state(rng_state["torch"])
+
+    return True
 
 
 def make_env(time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False):
@@ -111,13 +155,19 @@ def train(
     seed: int | None = None,
     dummy_env: bool = False,
 ):
-    # Set all random seeds for reproducibility
-    if seed is not None:
+    resuming = checkpoint_path and os.path.exists(checkpoint_path)
+
+    # Set random seeds for reproducibility
+    if resuming:
+        assert checkpoint_path is not None
+        assert load_rng_state(checkpoint_path)
+        print(f"RNG state restored from checkpoint")
+    elif seed is not None:
         print(f"Setting random seed: {seed}")
         np.random.seed(seed)
         torch.manual_seed(seed)
-
-    resuming = checkpoint_path and os.path.exists(checkpoint_path)
+    else:
+        print("No random seed specified, using default randomness")
 
     if resuming:
         # Resume in the same run directory as the checkpoint
@@ -179,14 +229,14 @@ def train(
     env = make_vec_env(time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env)
 
     # Load VecNormalize if resuming
-    vecnormalize_path = None
     if resuming:
         assert checkpoint_path is not None
         vecnormalize_path = find_vecnormalize_path(checkpoint_path)
-    if vecnormalize_path and os.path.exists(vecnormalize_path):
+        assert vecnormalize_path and os.path.exists(vecnormalize_path)
         print(f"Loading VecNormalize from: {vecnormalize_path}")
         env = VecNormalize.load(vecnormalize_path, env)
     else:
+        print("Initializing new VecNormalize...")
         env = VecNormalize(env, norm_obs=False, norm_reward=True)
 
     policy_kwargs = dict(
@@ -240,8 +290,8 @@ def train(
     print(f"\nModel architecture:")
     print(model.policy)
 
-    checkpoint_callback = CheckpointCallback(
-        save_freq=10000,
+    checkpoint_callback = CustomCheckpointCallback(
+        save_freq=2048 * 5,  # 10240 steps
         save_path=checkpoints_dir,
         name_prefix="rl_model",
         save_vecnormalize=True,
@@ -264,6 +314,8 @@ def train(
         final_model_path = os.path.join(checkpoints_dir, "rl_model_final.zip")
         model.save(final_model_path)
         env.save(os.path.join(checkpoints_dir, "rl_model_vecnormalize_final.pkl"))
+        save_rng_state(final_model_path)
+        print(f"RNG state saved")
 
         print("\n" + "=" * 60)
         print("Training completed!")
@@ -276,7 +328,8 @@ def train(
         interrupt_model_path = os.path.join(checkpoints_dir, "interrupted")
         model.save(interrupt_model_path)
         env.save(os.path.join(checkpoints_dir, "interrupted_vecnormalize.pkl"))
-        print(f"Model saved to: {interrupt_model_path}")
+        save_rng_state(interrupt_model_path + ".zip")
+        print(f"Model and RNG state saved to: {interrupt_model_path}")
         print(f"Run directory: {run_dir}")
 
     finally:
