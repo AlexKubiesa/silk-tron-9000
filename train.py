@@ -11,25 +11,29 @@ import torch
 from torch import nn
 
 
-from silk_tron.env import MyMonitor, SilksongBossEnv
+from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
 from silk_tron.networks import MultiHeadFeatureExtractor, TensorboardCallback
 
 
 load_dotenv(Path(__file__).parent / ".env")
 
 
-def make_env(time_scale: float = 1.0, no_fx: bool = False):
+def make_env(time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False):
     import torch
 
     torch.set_num_threads(1)
 
-    env = SilksongBossEnv(time_scale=time_scale, no_fx=no_fx)
+    if dummy_env:
+        env = DummySilksongBossEnv()
+    else:
+        env = SilksongBossEnv(time_scale=time_scale, no_fx=no_fx)
+
     env = MyMonitor(env)
     return env
 
 
-def make_vec_env(time_scale: float = 1.0, no_fx: bool = False):
-    env_fn = partial(make_env, time_scale=time_scale, no_fx=no_fx)
+def make_vec_env(time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False):
+    env_fn = partial(make_env, time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env)
     return DummyVecEnv([env_fn])
 
 
@@ -52,6 +56,7 @@ def train(
     device: Union[torch.device, str] = "cpu",
     no_fx: bool = False,
     seed: int | None = None,
+    dummy_env: bool = False,
 ):
     # Set all random seeds for reproducibility
     if seed is not None:
@@ -83,7 +88,7 @@ def train(
     print("=" * 60)
 
     print(f"\nLaunching game instance...")
-    env = make_vec_env(time_scale=time_scale, no_fx=no_fx)
+    env = make_vec_env(time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env)
 
     vecnormalize_path = (  # TODO: Support all checkpoint paths, not just this specific format
         (
@@ -287,6 +292,11 @@ if __name__ == "__main__":
         default=123,
         help="Random number generator seed for policy network reproducibility. The environment is not affected by the random seed. The seed is ignored if continuing from a checkpoint.",
     )
+    parser.add_argument(
+        "--dummy-env",
+        action="store_true",
+        help="Use reproducible dummy env for testing purposes",
+    )
     args = parser.parse_args()
 
     if args.eval:
@@ -311,4 +321,5 @@ if __name__ == "__main__":
             device="cpu",
             no_fx=True,
             seed=args.seed,
+            dummy_env=args.dummy_env,
         )
