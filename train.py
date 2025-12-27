@@ -9,6 +9,8 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 import torch
 from torch import nn
+from datetime import datetime
+import json
 
 
 from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
@@ -16,6 +18,57 @@ from silk_tron.networks import MultiHeadFeatureExtractor, TensorboardCallback
 
 
 load_dotenv(Path(__file__).parent / ".env")
+
+
+def create_run_directory(
+    base_dir: str, run_name: str | None = None
+) -> tuple[str, str, str]:
+    """Create a run directory with timestamp.
+
+    Returns:
+        Tuple of (run_dir, checkpoints_dir, logs_dir)
+    """
+    if run_name:
+        dir_name = run_name
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        dir_name = f"run_{timestamp}"
+
+    run_dir = os.path.join(base_dir, dir_name)
+    checkpoints_dir = os.path.join(run_dir, "checkpoints")
+    logs_dir = os.path.join(run_dir, "logs")
+
+    os.makedirs(checkpoints_dir, exist_ok=True)
+    os.makedirs(logs_dir, exist_ok=True)
+
+    return run_dir, checkpoints_dir, logs_dir
+
+
+def save_config(config_path: str, **kwargs):
+    """Save training configuration to JSON file."""
+    with open(config_path, "w") as f:
+        json.dump(kwargs, f, indent=2)
+
+
+def load_config(config_path: str) -> dict:
+    """Load training configuration from JSON file."""
+    with open(config_path, "r") as f:
+        return json.load(f)
+
+
+def find_vecnormalize_path(checkpoint_path: str) -> str | None:
+    """Find the corresponding VecNormalize file for a checkpoint.
+
+    Assumes new run-based structure: checkpoints/step_XXXXX.zip -> checkpoints/step_XXXXX_vecnormalize.pkl
+    """
+    checkpoint_path_obj = Path(checkpoint_path)
+    stem = checkpoint_path_obj.stem  # e.g., "step_010000" or "final"
+    vecnorm_path = checkpoint_path_obj.parent / f"{stem}_vecnormalize.pkl"
+
+    if vecnorm_path.exists():
+        return str(vecnorm_path)
+
+    return None
 
 
 def make_env(time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False):
@@ -49,8 +102,8 @@ def train(
     ent_coef: float = 0.05,
     vf_coef: float = 0.5,
     max_grad_norm: float = 0.3,
-    log_dir: str = "./logs",
-    save_dir: str = "./models",
+    experiments_dir: str = "./experiments",
+    run_name: str | None = None,
     checkpoint_path: str | None = None,
     time_scale: float = 4.0,
     device: Union[torch.device, str] = "cpu",
@@ -66,8 +119,18 @@ def train(
 
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(save_dir, exist_ok=True)
+    if resuming:
+        # Resume in the same run directory as the checkpoint
+        assert checkpoint_path is not None
+        checkpoint_path_obj = Path(checkpoint_path)
+        run_dir = str(checkpoint_path_obj.parent.parent)
+        checkpoints_dir = str(checkpoint_path_obj.parent)
+        log_dir = os.path.join(run_dir, "logs")
+    else:
+        # Create new run directory
+        run_dir, checkpoints_dir, log_dir = create_run_directory(
+            experiments_dir, run_name
+        )
 
     if resuming:
         print("\n" + "=" * 60)
@@ -79,26 +142,48 @@ def train(
         print("STARTING NEW TRAINING")
         print("=" * 60)
 
+    print(f"Run directory: {run_dir}")
     print(f"Total timesteps: {total_timesteps:,}")
     print(f"Learning rate: {learning_rate}")
     print(f"Time scale: {time_scale}")
     print(f"NoFx: {no_fx}")
-    print(f"Log directory: {log_dir}")
-    print(f"Save directory: {save_dir}")
+    print(f"Seed: {seed}")
     print("=" * 60)
+
+    # Save configuration
+    if not resuming:
+        config_path = os.path.join(run_dir, "config.json")
+        save_config(
+            config_path,
+            total_timesteps=total_timesteps,
+            learning_rate=learning_rate,
+            n_steps=n_steps,
+            batch_size=batch_size,
+            n_epochs=n_epochs,
+            gamma=gamma,
+            gae_lambda=gae_lambda,
+            clip_range=clip_range,
+            ent_coef=ent_coef,
+            vf_coef=vf_coef,
+            max_grad_norm=max_grad_norm,
+            time_scale=time_scale,
+            no_fx=no_fx,
+            seed=seed,
+            device=str(device),
+            dummy_env=dummy_env,
+            created_at=datetime.now().isoformat(),
+        )
+        print(f"Configuration saved to: {config_path}")
 
     print(f"\nLaunching game instance...")
     env = make_vec_env(time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env)
 
-    vecnormalize_path = (  # TODO: Support all checkpoint paths, not just this specific format
-        (
-            "models/rl_model_vecnormalize_"
-            + checkpoint_path[len("models/rl_model_") :].replace(".zip", ".pkl")
-        )
-        if checkpoint_path
-        else None
-    )
-    if resuming and vecnormalize_path and os.path.exists(vecnormalize_path):
+    # Load VecNormalize if resuming
+    vecnormalize_path = None
+    if resuming:
+        assert checkpoint_path is not None
+        vecnormalize_path = find_vecnormalize_path(checkpoint_path)
+    if vecnormalize_path and os.path.exists(vecnormalize_path):
         print(f"Loading VecNormalize from: {vecnormalize_path}")
         env = VecNormalize.load(vecnormalize_path, env)
     else:
@@ -157,7 +242,7 @@ def train(
 
     checkpoint_callback = CheckpointCallback(
         save_freq=10000,
-        save_path=save_dir,
+        save_path=checkpoints_dir,
         name_prefix="rl_model",
         save_vecnormalize=True,
     )
@@ -173,23 +258,26 @@ def train(
             total_timesteps=total_timesteps,
             callback=[checkpoint_callback, tensorboard_callback],
             progress_bar=True,
+            reset_num_timesteps=not resuming,
         )
 
-        final_model_path = os.path.join(save_dir, "rl_model_final")
+        final_model_path = os.path.join(checkpoints_dir, "rl_model_final.zip")
         model.save(final_model_path)
-        env.save(os.path.join(save_dir, "vecnormalize_final.pkl"))
+        env.save(os.path.join(checkpoints_dir, "rl_model_vecnormalize_final.pkl"))
 
         print("\n" + "=" * 60)
         print("Training completed!")
         print(f"Final model saved to: {final_model_path}")
+        print(f"Run directory: {run_dir}")
         print("=" * 60)
 
     except KeyboardInterrupt:
         print("\n\nTraining interrupted by user.")
-        interrupt_model_path = os.path.join(save_dir, "rl_model_interrupted")
+        interrupt_model_path = os.path.join(checkpoints_dir, "interrupted")
         model.save(interrupt_model_path)
-        env.save(os.path.join(save_dir, "vecnormalize_interrupted.pkl"))
+        env.save(os.path.join(checkpoints_dir, "interrupted_vecnormalize.pkl"))
         print(f"Model saved to: {interrupt_model_path}")
+        print(f"Run directory: {run_dir}")
 
     finally:
         env.close()
@@ -204,17 +292,15 @@ def evaluate(
 
     env = DummyVecEnv([partial(make_env, time_scale=time_scale, no_fx=no_fx)])
 
-    vecnormalize_path = "models/rl_model_vecnormalize_" + model_path[  # TODO: Support all checkpoint paths, not just this specific format
-        len("models/rl_model_") :
-    ].replace(
-        ".zip", ".pkl"
-    )
-    if os.path.exists(vecnormalize_path):
+    # Find corresponding VecNormalize file
+    vecnormalize_path = find_vecnormalize_path(model_path)
+    if vecnormalize_path and os.path.exists(vecnormalize_path):
         print(f"Loading VecNormalize from: {vecnormalize_path}")
         env = VecNormalize.load(vecnormalize_path, env)
         env.training = False
         env.norm_reward = False
     else:
+        print("VecNormalize file not found, using default normalization")
         env = VecNormalize(env, norm_obs=False, norm_reward=False, training=False)
 
     print(f"Loading PPO model from: {model_path}")
@@ -297,6 +383,17 @@ if __name__ == "__main__":
         action="store_true",
         help="Use reproducible dummy env for testing purposes",
     )
+    parser.add_argument(
+        "--experiments-dir",
+        type=str,
+        default="./experiments",
+        help="Base directory for experiment runs (default: ./experiments)",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        help="Custom name for this run (default: auto-generated with timestamp)",
+    )
     args = parser.parse_args()
 
     if args.eval:
@@ -316,6 +413,8 @@ if __name__ == "__main__":
             ent_coef=0.03,
             vf_coef=0.5,
             max_grad_norm=0.3,
+            experiments_dir=args.experiments_dir,
+            run_name=args.run_name,
             checkpoint_path=args.checkpoint,
             time_scale=4.0,
             device="cpu",

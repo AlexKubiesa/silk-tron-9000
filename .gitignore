@@ -23,8 +23,7 @@ x64/
 plugin/Directory.Build.props
 
 # Experiment artifacts
-logs/
-models/
+experiments/
 
 # Visual Studio Code
 .vscode/*

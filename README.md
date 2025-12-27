@@ -50,7 +50,7 @@ The built plugin will be automatically copied to the game's `BepInEx/plugins/` f
 
 ```bash
 uv run train.py
-uv run train.py --checkpoint ./models/rl_model_1000_steps.zip
+uv run train.py --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
 ```
 
 > **Tip**: Use `--no-fx` mode (enabled by default in training) for faster step processing.
@@ -58,7 +58,7 @@ uv run train.py --checkpoint ./models/rl_model_1000_steps.zip
 ### Evaluation
 
 ```bash
-uv run train.py --eval --checkpoint ./models/rl_model_1000_steps.zip
+uv run train.py --eval --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
 ```
 
 ### Tensorboard
