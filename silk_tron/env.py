@@ -3,6 +3,7 @@ from typing import Optional
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+from numpy.typing import NDArray
 from stable_baselines3.common.monitor import Monitor
 from silk_tron.constants import (
     BOSS_MAX_HEALTH,
@@ -250,3 +251,75 @@ class MyMonitor(Monitor):
                 name: sum(vals) for name, vals in self.reward_components.items()
             }
         return observation, reward, terminated, truncated, info
+
+
+class DummySilksongBossEnv(gym.Env):
+    """A deterministic dummy environment for testing reproducibility."""
+
+    MAX_X = 4
+    MAX_Y = 4
+
+    def __init__(self):
+        super().__init__()
+
+        self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf, shape=(OBSERVATION_DIM,), dtype=np.float32
+        )
+
+    def reset(self, seed=None, options=None):
+        self.player_x = 0
+        self.player_y = 0
+        self.boss_state = 0
+        self.boss_x = 0
+        self.boss_y = 0
+        observation = self._get_observation()
+        info = {}
+        return observation, info
+
+    def step(self, action: NDArray[np.integer]):
+        if action[0] == 1:  # left
+            self.player_x = max(0, self.player_x - 1)
+        elif action[0] == 2:  # right
+            self.player_x = min(self.MAX_X, self.player_x + 1)
+
+        if action[1] == 1:  # up
+            self.player_y = max(0, self.player_y - 1)
+        elif action[1] == 2:  # down
+            self.player_y = min(self.MAX_Y, self.player_y + 1)
+
+        self.boss_state = (self.boss_state + 1) % 15
+
+        boss_move_x = self.boss_state % 3  # stay, left, right 33% of the time
+        if boss_move_x == 1:  # left
+            self.boss_x = max(0, self.boss_x - 1)
+        elif boss_move_x == 2:  # right
+            self.boss_x = min(self.MAX_X, self.boss_x + 1)
+
+        boss_move_y = 2 - (self.boss_state % 5) // 2  # stay 20%, left/right 40%
+        if boss_move_y == 1:  # up
+            self.boss_y = max(0, self.boss_y - 1)
+        elif boss_move_y == 2:  # down
+            self.boss_y = min(self.MAX_Y, self.boss_y + 1)
+
+        observation = self._get_observation()
+
+        player_boss_collision = (
+            self.player_x == self.boss_x and self.player_y == self.boss_y
+        )
+        reward = -1 if player_boss_collision else 0.1
+
+        terminated = False
+        truncated = False
+        info = {}
+
+        return observation, reward, terminated, truncated, info
+
+    def _get_observation(self):
+        player_x = self.player_x / self.MAX_X
+        player_y = self.player_y / self.MAX_Y
+        boss_x = (self.boss_x - self.player_x) / self.MAX_X
+        boss_y = (self.boss_y - self.player_y) / self.MAX_Y
+        return np.array(
+            [player_x, player_y] + [0.0] * 9 + [boss_x, boss_y] + [0.0] * 76
+        )

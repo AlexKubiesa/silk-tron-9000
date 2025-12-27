@@ -1,0 +1,1 @@
+- When running Python or other related commands, use `uv run` to ensure the correct environment is used.

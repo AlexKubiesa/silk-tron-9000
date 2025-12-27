@@ -53,6 +53,12 @@ def train(
     no_fx: bool = False,
     seed: int | None = None,
 ):
+    # Set all random seeds for reproducibility
+    if seed is not None:
+        print(f"Setting random seed: {seed}")
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
     os.makedirs(log_dir, exist_ok=True)
@@ -121,8 +127,6 @@ def train(
         )
     else:
         print("\nInitializing new PPO model...")
-        if seed is not None:
-            torch.manual_seed(seed)
         model = PPO(
             policy="MlpPolicy",
             env=env,
