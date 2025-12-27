@@ -15,7 +15,7 @@ from silk_tron.shared_memory import GameState, GameTimeoutError, SilkSongSharedM
 
 
 class SilksongBossEnv(gym.Env):
-    def __init__(self, time_scale: float = 1.0, no_fx: bool = False):
+    def __init__(self, id: int = 1, time_scale: float = 1.0, no_fx: bool = False):
         super().__init__()
 
         self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
@@ -23,7 +23,7 @@ class SilksongBossEnv(gym.Env):
             low=-np.inf, high=np.inf, shape=(OBSERVATION_DIM,), dtype=np.float32
         )
 
-        self.shm = SilkSongSharedMemory(time_scale=time_scale, no_fx=no_fx)
+        self.shm = SilkSongSharedMemory(id, time_scale=time_scale, no_fx=no_fx)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)

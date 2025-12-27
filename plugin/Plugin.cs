@@ -11,6 +11,7 @@ public class Plugin : BaseUnityPlugin
 {
     public static Plugin Instance;
     public static bool IsReady = false;
+    public static int InstanceId = 0;
 
     internal static new ManualLogSource Logger;
 
@@ -74,8 +75,9 @@ public class Plugin : BaseUnityPlugin
     private void ParseCommandLineArgs()
     {
         CommandLineArgs.Parse();
+        InstanceId = CommandLineArgs.Id;
         ActionManager.IsAgentControlEnabled = !CommandLineArgs.Manual;
-        Logger.LogInfo($"{CommandLineArgs.TimeScale}, Manual: {CommandLineArgs.Manual}, NoFx: {CommandLineArgs.NoFx}");
+        Logger.LogInfo($"Instance ID: {CommandLineArgs.Id}, Time scale: {CommandLineArgs.TimeScale}, Manual: {CommandLineArgs.Manual}, NoFx: {CommandLineArgs.NoFx}");
     }
 
     private void Update()

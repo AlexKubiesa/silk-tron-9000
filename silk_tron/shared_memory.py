@@ -4,6 +4,7 @@ from enum import IntEnum
 from multiprocessing import shared_memory
 import os
 from pathlib import Path
+import shutil
 import signal
 import struct
 import subprocess
@@ -213,19 +214,103 @@ class SilkSongSharedMemory:
     DEFAULT_TIMEOUT_MS = 30000
 
     @staticmethod
-    def get_game_path() -> str:
-        game_path = os.getenv("SILKSONG_PATH")
-        if not game_path:
+    def _create_symlink(link_path: Path, target_path: Path):
+        """Create a symbolic link."""
+        os.symlink(target_path, link_path)
+
+    @staticmethod
+    def _create_hardlink(link_path: Path, target_path: Path):
+        """Create a hard link for files."""
+        os.link(target_path, link_path)
+
+    @staticmethod
+    def get_game_path(env_id: int) -> str:
+        # TODO: Separate setting up game files from getting the game path
+        base_path = os.getenv("SILKSONG_PATH")
+        if not base_path:
             raise ValueError("SILKSONG_PATH environment variable is not set")
 
-        return game_path
+        base_path = Path(base_path)
+        base_dir = base_path.parent
+        exe_name = base_path.name
+        data_folder_name = base_path.stem + "_Data"
+        base_bepinex = base_dir / "BepInEx"
+
+        instance_dir = base_dir / "instances" / str(env_id)
+        instance_exe = instance_dir / exe_name
+        instance_bepinex = instance_dir / "BepInEx"
+
+        if instance_exe.exists():
+            return str(instance_exe)
+
+        instance_dir.mkdir(parents=True, exist_ok=True)
+
+        shutil.copy2(base_path, instance_exe)
+
+        folders_to_link = [
+            data_folder_name,
+            "MonoBleedingEdge",
+        ]
+
+        for folder in folders_to_link:
+            src = base_dir / folder
+            dst = instance_dir / folder
+            if src.exists() and not dst.exists():
+                SilkSongSharedMemory._create_symlink(dst, src)
+
+        files_to_link = [
+            "UnityPlayer.so",
+        ]
+
+        for filename in files_to_link:
+            src = base_dir / filename
+            dst = instance_dir / filename
+            if src.exists() and not dst.exists():
+                SilkSongSharedMemory._create_hardlink(dst, src)
+
+        files_to_copy = [
+            "libdoorstop.so",
+            "doorstop_config.ini",
+            ".doorstop_version",
+        ]
+
+        for filename in files_to_copy:
+            src = base_dir / filename
+            dst = instance_dir / filename
+            if src.exists() and not dst.exists():
+                shutil.copy2(src, dst)
+
+        if base_bepinex.exists():
+            instance_bepinex.mkdir(parents=True, exist_ok=True)
+
+            preloader_src = base_bepinex / "BepInEx.Preloader.dll"
+            if preloader_src.exists():
+                shutil.copy2(preloader_src, instance_bepinex / "BepInEx.Preloader.dll")
+
+            for folder in ["core", "plugins", "patchers"]:
+                src = base_bepinex / folder
+                dst = instance_bepinex / folder
+                if src.exists() and not dst.exists():
+                    SilkSongSharedMemory._create_symlink(dst, src)
+
+            config_src = base_bepinex / "config"
+            config_dst = instance_bepinex / "config"
+            if config_src.exists() and not config_dst.exists():
+                shutil.copytree(config_src, config_dst)
+
+            (instance_bepinex / "cache").mkdir(exist_ok=True)
+
+        print(f"[Env {env_id}] Created instance folder")
+        return str(instance_exe)
 
     def __init__(
         self,
+        id: int,
         time_scale: float = 1.0,
         no_fx: bool = False,
         timeout_ms: int | None = None,
     ):
+        self.id = id
         self.time_scale = time_scale
         self.no_fx = no_fx
         self.process = None
@@ -233,17 +318,21 @@ class SilkSongSharedMemory:
             timeout_ms if timeout_ms is not None else self.DEFAULT_TIMEOUT_MS
         )
 
-        game_path = self.get_game_path()
+        if id < 1:
+            raise ValueError(f"Invalid environment ID: {id}. Must be >= 1.")
+
+        game_path = self.get_game_path(id)
+        shm_name = f"{self.MEMORY_NAME}_{id}"
 
         self.shm = shared_memory.SharedMemory(
-            name=self.MEMORY_NAME,
+            name=shm_name,
             create=True,
             size=self.MEMORY_SIZE,
         )
         self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
-        logging.info(f"Created shared memory: {self.MEMORY_NAME}")
+        logging.info(f"Created shared memory: {shm_name}")
 
-        args = [game_path, "--time-scale", str(time_scale)]
+        args = [game_path, "--id", str(id), "--time-scale", str(time_scale)]
         if no_fx:
             args.append("--no-fx")
 
@@ -251,7 +340,19 @@ class SilkSongSharedMemory:
 
         logging.info(f"Launching game from: {game_path}")
         logging.info(f"Time scale: {time_scale}, NoFx: {no_fx}")
-        self.process = subprocess.Popen(args, cwd=game_dir)
+        env = os.environ.copy()
+        game_dir = Path(game_path).parent
+
+        env["LD_PRELOAD"] = "./libdoorstop.so"
+        env["LD_LIBRARY_PATH"] = f".:{env.get('LD_LIBRARY_PATH', '')}"
+        env["DOORSTOP_ENABLED"] = "1"
+        env["DOORSTOP_TARGET_ASSEMBLY"] = str(
+            game_dir / "BepInEx" / "core" / "BepInEx.Preloader.dll"
+        )
+        env["__GL_SYNC_TO_VBLANK"] = "0"
+        env["vblank_mode"] = "0"
+
+        self.process = subprocess.Popen(args, env=env, cwd=game_dir)
 
         logging.info(f"Waiting for game to connect...")
         self.wait_for_state(StateType.READY, timeout_ms=60000)
@@ -397,15 +498,25 @@ class SilkSongSharedMemory:
 
         self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
 
-        game_path = self.get_game_path()
-        args = [game_path, "--time-scale", str(self.time_scale)]
+        game_path = self.get_game_path(self.id)
+        args = [game_path, "--id", str(self.id), "--time-scale", str(self.time_scale)]
         if self.no_fx:
             args.append("--no-fx")
 
         print(f"Launching game from: {game_path}")
 
+        env = os.environ.copy()
         game_dir = Path(game_path).parent
-        self.process = subprocess.Popen(args, cwd=game_dir)
+        env["LD_PRELOAD"] = "./libdoorstop.so"
+        env["LD_LIBRARY_PATH"] = f".:{env.get('LD_LIBRARY_PATH', '')}"
+        env["DOORSTOP_ENABLED"] = "1"
+        env["DOORSTOP_TARGET_ASSEMBLY"] = str(
+            game_dir / "BepInEx" / "core" / "BepInEx.Preloader.dll"
+        )
+        env["__GL_SYNC_TO_VBLANK"] = "0"
+        env["vblank_mode"] = "0"
+
+        self.process = subprocess.Popen(args, env=env, cwd=game_dir)
 
         print("Waiting for game to connect...")
         self.wait_for_state(StateType.READY, timeout_ms=60000)

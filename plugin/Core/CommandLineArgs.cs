@@ -4,6 +4,7 @@ namespace SilkTronPlugin;
 
 public static class CommandLineArgs
 {
+    public static int Id { get; private set; } = 0;
     public static float TimeScale { get; private set; } = 1.0f;
     public static bool Manual { get; private set; } = false;
     public static bool NoFx { get; private set; } = false;
@@ -13,7 +14,14 @@ public static class CommandLineArgs
         var args = Environment.GetCommandLineArgs();
         for (int i = 0; i < args.Length; i++)
         {
-            if (args[i] == "--time-scale" && i + 1 < args.Length)
+            if (args[i] == "--id" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[i + 1], out int id))
+                {
+                    Id = id;
+                }
+            }
+            else if (args[i] == "--time-scale" && i + 1 < args.Length)
             {
                 if (float.TryParse(args[i + 1], out float timeScale))
                 {

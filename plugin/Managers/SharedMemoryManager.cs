@@ -272,7 +272,7 @@ public class SharedMemoryManager : MonoBehaviour
 {
     public static SharedMemoryManager Instance;
 
-    private const string MemoryPath = "/dev/shm/silk_tron";
+    private const string MemoryPathBase = "/dev/shm/silk_tron";
     private const int StateOffset = 0;
     private const int GameStateOffset = 4;
     private const int CommandOffset = 1024;
@@ -280,6 +280,18 @@ public class SharedMemoryManager : MonoBehaviour
     private MemoryMappedFile memoryMappedFile;
     private MemoryMappedViewAccessor accessor;
     private CommandData commandData;
+
+    private string GetMemoryPath()
+    {
+        if (Plugin.InstanceId == 0)
+        {
+            return MemoryPathBase;
+        }
+        else
+        {
+            return $"{MemoryPathBase}_{Plugin.InstanceId}";
+        }
+    }
 
     private void Awake()
     {
@@ -292,7 +304,8 @@ public class SharedMemoryManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        memoryMappedFile = MemoryMappedFile.CreateFromFile(MemoryPath);
+        string memoryPath = GetMemoryPath();
+        memoryMappedFile = MemoryMappedFile.CreateFromFile(memoryPath);
         accessor = memoryMappedFile.CreateViewAccessor();
     }
 

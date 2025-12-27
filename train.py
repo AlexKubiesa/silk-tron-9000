@@ -6,11 +6,12 @@ from typing import Union
 import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 import torch
 from torch import nn
 from datetime import datetime
 import json
+import gymnasium as gym
 
 
 from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
@@ -20,8 +21,15 @@ from silk_tron.networks import (
     CustomCheckpointCallback,
 )
 
+_next_env_id = 1
+
 
 load_dotenv(Path(__file__).parent / ".env")
+
+
+def reset_env_id_counter():
+    global _next_env_id
+    _next_env_id = 1
 
 
 def create_run_directory(
@@ -115,7 +123,9 @@ def load_rng_state(checkpoint_path: str) -> bool:
     return True
 
 
-def make_env(time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False):
+def make_env(
+    env_id: int, time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False
+) -> gym.Env:
     import torch
 
     torch.set_num_threads(1)
@@ -123,15 +133,40 @@ def make_env(time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = Fal
     if dummy_env:
         env = DummySilksongBossEnv()
     else:
-        env = SilksongBossEnv(time_scale=time_scale, no_fx=no_fx)
+        env = SilksongBossEnv(env_id, time_scale=time_scale, no_fx=no_fx)
 
     env = MyMonitor(env)
     return env
 
 
-def make_vec_env(time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False):
-    env_fn = partial(make_env, time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env)
-    return DummyVecEnv([env_fn])
+def make_vec_env(
+    n_envs: int = 1,
+    time_scale: float = 1.0,
+    no_fx: bool = False,
+    dummy_env: bool = False,
+):
+    global _next_env_id
+
+    if n_envs < 1:
+        raise ValueError(f"n_envs must be >= 1, got {n_envs}")
+
+    start_id = _next_env_id
+    _next_env_id += n_envs
+    env_fns = [
+        partial(
+            make_env,
+            env_id=start_id + i,
+            time_scale=time_scale,
+            no_fx=no_fx,
+            dummy_env=dummy_env,
+        )
+        for i in range(n_envs)
+    ]
+
+    if n_envs > 1:
+        return SubprocVecEnv(env_fns)
+    else:
+        return DummyVecEnv(env_fns)
 
 
 def train(
@@ -154,6 +189,7 @@ def train(
     no_fx: bool = False,
     seed: int | None = None,
     dummy_env: bool = False,
+    n_envs: int = 1,
 ):
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
@@ -226,7 +262,9 @@ def train(
         print(f"Configuration saved to: {config_path}")
 
     print(f"\nLaunching game instance...")
-    env = make_vec_env(time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env)
+    env = make_vec_env(
+        n_envs=n_envs, time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env
+    )
 
     # Load VecNormalize if resuming
     if resuming:
@@ -343,7 +381,7 @@ def evaluate(
     print(f"Time scale: {time_scale}")
     print(f"NoFx: {no_fx}")
 
-    env = DummyVecEnv([partial(make_env, time_scale=time_scale, no_fx=no_fx)])
+    env = DummyVecEnv([partial(make_env, env_id=1, time_scale=time_scale, no_fx=no_fx)])
 
     # Find corresponding VecNormalize file
     vecnormalize_path = find_vecnormalize_path(model_path)
@@ -400,6 +438,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--eval", action="store_true")
     parser.add_argument("--checkpoint", type=str)
+    parser.add_argument("--n-envs", type=int, default=4)
 
     parser.add_argument(
         "--total-timesteps",
@@ -474,4 +513,5 @@ if __name__ == "__main__":
             no_fx=True,
             seed=args.seed,
             dummy_env=args.dummy_env,
+            n_envs=args.n_envs,
         )
