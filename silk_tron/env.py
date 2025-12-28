@@ -54,8 +54,6 @@ class SilksongBossEnv(gym.Env):
         return observation, info
 
     def step(self, action):
-        self.total_steps += 1
-
         binary_action = self._convert_to_binary(action)
 
         try:
@@ -63,6 +61,16 @@ class SilksongBossEnv(gym.Env):
         except GameTimeoutError as e:
             print(f"[Env] {e}")
             return self._handle_timeout()
+
+        self.total_steps += 1
+
+        boss_dmg = self.prev_boss_health - game_state.boss_health
+        if boss_dmg > 0:
+            self.attack_count += 1
+
+        player_dmg = self.prev_player_health - game_state.player_health
+        if player_dmg > 0:
+            self.hurt_count += 1
 
         reward, reward_components = self._calculate_reward(game_state)
 
@@ -104,19 +112,10 @@ class SilksongBossEnv(gym.Env):
         components = {}
 
         boss_dmg = self.prev_boss_health - game_state.boss_health
+        components["boss_damage"] = boss_dmg / BOSS_MAX_HEALTH
+
         player_dmg = self.prev_player_health - game_state.player_health
-
-        if boss_dmg > 0:
-            components["boss_damage"] = boss_dmg / BOSS_MAX_HEALTH
-            self.attack_count += 1
-        else:
-            components["boss_damage"] = 0.0
-
-        if player_dmg > 0:
-            components["player_damage"] = -(player_dmg / PLAYER_MAX_HEALTH) * 0.1
-            self.hurt_count += 1
-        else:
-            components["player_damage"] = 0.0
+        components["player_damage"] = -(player_dmg / PLAYER_MAX_HEALTH) * 0.1
 
         distance = np.sqrt(
             (game_state.player_pos_x - game_state.boss_pos_x) ** 2
@@ -129,8 +128,7 @@ class SilksongBossEnv(gym.Env):
         components["too_far"] = -0.001 if too_far else 0.0
         components["too_close"] = -0.001 if too_close else 0.0
 
-        stalling = boss_dmg == 0 and player_dmg == 0
-        components["stalling"] = -0.0001 if stalling else 0.0
+        components["time_penalty"] = -0.0001
 
         reward = sum(c for c in components.values())
 
@@ -138,13 +136,7 @@ class SilksongBossEnv(gym.Env):
 
     def _default_reward(self):
         reward = 0.0
-        components = {
-            "boss_damage": 0.0,
-            "player_damage": 0.0,
-            "too_far": 0.0,
-            "too_close": 0.0,
-            "stalling": 0.0,
-        }
+        components = None
         return reward, components
 
     def _is_terminated(self, game_state: GameState) -> bool:
@@ -158,7 +150,7 @@ class SilksongBossEnv(gym.Env):
     def _get_info(
         self,
         game_state: GameState,
-        reward_components: dict[str, float],
+        reward_components: dict[str, float] | None,
         episode_end: bool = False,
     ) -> dict:
         info = {
