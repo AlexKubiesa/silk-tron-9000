@@ -113,7 +113,7 @@ class SilksongBossEnv(gym.Env):
             components["boss_damage"] = 0.0
 
         if player_dmg > 0:
-            components["player_damage"] = -(player_dmg / PLAYER_MAX_HEALTH) * 0.2
+            components["player_damage"] = -(player_dmg / PLAYER_MAX_HEALTH) * 0.1
             self.hurt_count += 1
         else:
             components["player_damage"] = 0.0
