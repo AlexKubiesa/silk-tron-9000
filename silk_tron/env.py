@@ -69,6 +69,9 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.lowest_boss_hp = game_state.boss_health
         self.prev_attack = 0
 
+        # Action tracking
+        self.action_counts = np.zeros(8, dtype=np.int32)
+
         observation = self._make_observation(game_state)
         reward, reward_components = self._default_reward()
         info = self._get_info(game_state, reward_components)
@@ -76,6 +79,9 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         return observation, info
 
     def step(self, action):
+        # Track actions
+        self._track_actions(action)
+
         binary_action = self._convert_to_binary(action)
 
         try:
@@ -296,6 +302,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             info["attack_count"] = self.attack_count
             info["heal_count"] = self.heal_count
             info["hurt_count"] = self.hurt_count
+            info["action_counts"] = self.action_counts.copy()
 
         return info
 
@@ -328,6 +335,34 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         binary[9] = action[7]  # heal
 
         return binary
+
+    def _track_actions(self, action: np.ndarray) -> None:
+        """Track action statistics for logging."""
+        # Track horizontal movement (left/right)
+        if action[0] == 1:  # left
+            self.action_counts[0] += 1
+        elif action[0] == 2:  # right
+            self.action_counts[0] += 1
+
+        # Track vertical movement (up/down)
+        if action[1] == 1:  # up
+            self.action_counts[1] += 1
+        elif action[1] == 2:  # down
+            self.action_counts[1] += 1
+
+        # Track binary actions
+        if action[2] == 1:  # jump
+            self.action_counts[2] += 1
+        if action[3] == 1:  # attack
+            self.action_counts[3] += 1
+        if action[4] == 1:  # dash
+            self.action_counts[4] += 1
+        if action[5] == 1:  # clawline
+            self.action_counts[5] += 1
+        if action[6] == 1:  # skill
+            self.action_counts[6] += 1
+        if action[7] == 1:  # heal
+            self.action_counts[7] += 1
 
     def close(self):
         if hasattr(self, "shm") and self.shm is not None:

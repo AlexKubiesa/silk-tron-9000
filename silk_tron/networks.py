@@ -126,6 +126,17 @@ class TensorboardCallback(BaseCallback):
         self.hurt_counts = deque(maxlen=buffer_size)
         self.lowest_boss_hps = deque(maxlen=buffer_size)
         self.reward_components = defaultdict(partial(deque, maxlen=buffer_size))
+        self.action_proportions = defaultdict(partial(deque, maxlen=buffer_size))
+        self.action_names = [
+            "horizontal_movement",
+            "vertical_movement",
+            "jump",
+            "attack",
+            "dash",
+            "clawline",
+            "skill",
+            "heal",
+        ]
 
     def _on_step(self) -> bool:
         for i, info in enumerate(self.locals.get("infos", [])):
@@ -134,6 +145,8 @@ class TensorboardCallback(BaseCallback):
                 lowest_boss_hp = info["lowest_boss_hp"]
                 attack_count = info["attack_count"]
                 hurt_count = info["hurt_count"]
+                action_counts = info.get("action_counts")
+                total_steps = info["total_steps"]
 
                 if episode_reward > self.highest_reward:
                     self.highest_reward = episode_reward
@@ -151,6 +164,12 @@ class TensorboardCallback(BaseCallback):
                 )
                 self.logger.record("episode/highest_reward", self.highest_reward)
 
+                # Track action proportions
+                if action_counts is not None and total_steps > 0:
+                    for idx, action_name in enumerate(self.action_names):
+                        proportion = action_counts[idx] / total_steps
+                        self.action_proportions[action_name].append(proportion)
+
             if (ep_info := info.get("episode")) is not None:
                 if (reward_components := ep_info.get("reward_components")) is not None:
                     for name, val in reward_components.items():
@@ -158,6 +177,13 @@ class TensorboardCallback(BaseCallback):
 
         for name, vals in self.reward_components.items():
             self.logger.record(f"rollout/ep_rew_cpt_means/{name}", np.mean(vals))
+
+        # Log action proportions
+        for action_name, proportions in self.action_proportions.items():
+            if len(proportions) > 0:
+                self.logger.record(
+                    f"actions/proportion_{action_name}", np.mean(proportions)
+                )
 
         return True
 
