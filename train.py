@@ -12,6 +12,7 @@ from torch import nn
 from datetime import datetime
 import json
 import gymnasium as gym
+from torchinfo import summary
 
 
 from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
@@ -327,6 +328,19 @@ def train(
     print(f"Using device: {model.device}")
     print(f"\nModel architecture:")
     print(model.policy)
+
+    print("\nModel details:")
+    print("=" * 65)
+    print("\nShared feature extractor:")
+    summary(model.policy.features_extractor)
+    print("\nValue network hidden layers:")
+    summary(model.policy.mlp_extractor.value_net)
+    print("\nPolicy network hidden layers:")
+    summary(model.policy.mlp_extractor.policy_net)
+    print("\nValue network head:")
+    summary(model.policy.value_net)
+    print("\nAction network head:")
+    summary(model.policy.action_net)
 
     checkpoint_callback = CustomCheckpointCallback(
         save_freq=2048 * 5,  # 10240 steps
