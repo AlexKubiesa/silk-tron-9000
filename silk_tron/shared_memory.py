@@ -13,23 +13,6 @@ import logging
 
 import numpy as np
 
-from silk_tron.constants import (
-    ARENA_MAX_X,
-    ARENA_MAX_Y,
-    ARENA_MIN_X,
-    ARENA_MIN_Y,
-    BOSS_MAX_HEALTH,
-    BOSS_MAX_PHASE,
-    BOSS_VEL_X_RANGE,
-    BOSS_VEL_Y_RANGE,
-    HERO_VEL_X_RANGE,
-    HERO_VEL_Y_RANGE,
-    NUM_BOSS_ANIMATION_STATES,
-    NUM_PLAYER_ANIMATION_STATES,
-    PLAYER_MAX_HEALTH,
-    PLAYER_MAX_SILK,
-)
-
 
 _active_instances: list["SilkSongSharedMemory"] = []
 
@@ -105,115 +88,6 @@ class GameState:
 
     raycast_distances: np.ndarray
     raycast_hit_types: np.ndarray
-
-    MAX_DISTANCE = np.sqrt(
-        (ARENA_MAX_X - ARENA_MIN_X) ** 2 + (ARENA_MAX_Y - ARENA_MIN_Y) ** 2
-    )
-
-    @staticmethod
-    def min_max_normalize(value: float, min_value: float, max_value: float) -> float:
-        value = (value - min_value) / (max_value - min_value)
-        value = np.clip(value, 0.0, 1.0)
-        return value
-
-    def to_observation(self) -> np.ndarray:
-        player_x = self.min_max_normalize(self.player_pos_x, ARENA_MIN_X, ARENA_MAX_X)
-        player_y = self.min_max_normalize(self.player_pos_y, ARENA_MIN_Y, ARENA_MAX_Y)
-
-        player_vel_x = self.min_max_normalize(
-            self.player_vel_x, HERO_VEL_X_RANGE[0], HERO_VEL_X_RANGE[1]
-        )
-        player_vel_y = self.min_max_normalize(
-            self.player_vel_y, HERO_VEL_Y_RANGE[0], HERO_VEL_Y_RANGE[1]
-        )
-
-        player_health = self.player_health / PLAYER_MAX_HEALTH
-        player_silk = self.player_silk / PLAYER_MAX_SILK
-        player_grounded = float(self.player_grounded)
-        player_can_dash = float(self.player_can_dash)
-        player_facing_right = float(self.player_facing_right)
-        player_invincible = float(self.player_invincible)
-        player_can_attack = float(self.player_can_attack)
-
-        boss_x = self.min_max_normalize(self.boss_pos_x, ARENA_MIN_X, ARENA_MAX_X)
-        boss_y = self.min_max_normalize(self.boss_pos_y, ARENA_MIN_Y, ARENA_MAX_Y)
-
-        boss_vel_x = self.min_max_normalize(
-            self.boss_vel_x, BOSS_VEL_X_RANGE[0], BOSS_VEL_X_RANGE[1]
-        )
-        boss_vel_y = self.min_max_normalize(
-            self.boss_vel_y, BOSS_VEL_Y_RANGE[0], BOSS_VEL_Y_RANGE[1]
-        )
-
-        boss_health = self.boss_health / BOSS_MAX_HEALTH
-        boss_phase = self.boss_phase / BOSS_MAX_PHASE
-        boss_facing_right = float(self.boss_facing_right)
-
-        arena_width = ARENA_MAX_X - ARENA_MIN_X
-        rel_x = self.min_max_normalize(
-            (self.boss_pos_x - self.player_pos_x), -arena_width, arena_width
-        )
-
-        arena_height = ARENA_MAX_Y - ARENA_MIN_Y
-        rel_y = self.min_max_normalize(
-            (self.boss_pos_y - self.player_pos_y), -arena_height, arena_height
-        )
-
-        distance = (
-            np.sqrt(
-                (self.boss_pos_x - self.player_pos_x) ** 2
-                + (self.boss_pos_y - self.player_pos_y) ** 2
-            )
-            / self.MAX_DISTANCE
-        )
-        distance = np.clip(distance, 0.0, 1.0)
-
-        boss_anim_state = float(
-            np.clip(self.boss_animation_state, 0, NUM_BOSS_ANIMATION_STATES - 1)
-        )
-        boss_anim_progress = np.clip(self.boss_animation_progress, 0.0, 1.0)
-
-        player_anim_state = float(
-            np.clip(self.player_animation_state, 0, NUM_PLAYER_ANIMATION_STATES - 1)
-        )
-        player_anim_progress = np.clip(self.player_animation_progress, 0.0, 1.0)
-
-        state_obs = np.array(
-            [
-                player_x,
-                player_y,
-                player_vel_x,
-                player_vel_y,
-                player_health,
-                player_silk,
-                player_grounded,
-                player_can_dash,
-                player_facing_right,
-                player_invincible,
-                player_can_attack,
-                boss_x,
-                boss_y,
-                boss_vel_x,
-                boss_vel_y,
-                boss_health,
-                boss_phase,
-                boss_facing_right,
-                rel_x,
-                rel_y,
-                distance,
-                boss_anim_state,
-                boss_anim_progress,
-                player_anim_state,
-                player_anim_progress,
-            ],
-            dtype=np.float32,
-        )
-
-        raycast_obs = np.concatenate([self.raycast_distances, self.raycast_hit_types])
-
-        observe = np.concatenate([state_obs, raycast_obs.astype(np.float32)])
-
-        return observe
 
 
 class SilkSongSharedMemory:

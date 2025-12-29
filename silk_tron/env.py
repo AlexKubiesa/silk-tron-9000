@@ -6,15 +6,37 @@ import numpy as np
 from numpy.typing import NDArray
 from stable_baselines3.common.monitor import Monitor
 from silk_tron.constants import (
+    ARENA_MAX_X,
+    ARENA_MAX_Y,
+    ARENA_MIN_X,
+    ARENA_MIN_Y,
     BOSS_MAX_HEALTH,
+    BOSS_MAX_PHASE,
+    BOSS_VEL_X_RANGE,
+    BOSS_VEL_Y_RANGE,
+    HERO_VEL_X_RANGE,
+    HERO_VEL_Y_RANGE,
     MAX_EPISODE_STEPS,
+    NUM_BOSS_ANIMATION_STATES,
+    NUM_PLAYER_ANIMATION_STATES,
     OBSERVATION_DIM,
     PLAYER_MAX_HEALTH,
+    PLAYER_MAX_SILK,
 )
 from silk_tron.shared_memory import GameState, GameTimeoutError, SilkSongSharedMemory
 
 
-class SilksongBossEnv(gym.Env):
+def min_max_normalize(value: float, min_value: float, max_value: float) -> float:
+    value = (value - min_value) / (max_value - min_value)
+    value = np.clip(value, 0.0, 1.0)
+    return value
+
+
+class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
+    MAX_DISTANCE = np.sqrt(
+        (ARENA_MAX_X - ARENA_MIN_X) ** 2 + (ARENA_MAX_Y - ARENA_MIN_Y) ** 2
+    )
+
     def __init__(self, id: int = 1, time_scale: float = 1.0, no_fx: bool = False):
         super().__init__()
 
@@ -47,7 +69,7 @@ class SilksongBossEnv(gym.Env):
         self.lowest_boss_hp = game_state.boss_health
         self.prev_attack = 0
 
-        observation = game_state.to_observation()
+        observation = self._make_observation(game_state)
         reward, reward_components = self._default_reward()
         info = self._get_info(game_state, reward_components)
 
@@ -77,7 +99,7 @@ class SilksongBossEnv(gym.Env):
         self.episode_reward += reward
         self.lowest_boss_hp = min(self.lowest_boss_hp, game_state.boss_health)
 
-        observation = game_state.to_observation()
+        observation = self._make_observation(game_state)
 
         terminated = self._is_terminated(game_state)
         truncated = self._is_truncated(game_state)
@@ -99,7 +121,7 @@ class SilksongBossEnv(gym.Env):
         self.prev_player_health = game_state.player_health
         self.prev_player_silk = game_state.player_silk
 
-        observation = game_state.to_observation()
+        observation = self._make_observation(game_state)
         reward, reward_components = self._calculate_reward(game_state)
         info = self._get_info(game_state, reward_components, episode_end=True)
         info["timeout_restart"] = True
@@ -138,6 +160,110 @@ class SilksongBossEnv(gym.Env):
         reward = 0.0
         components = None
         return reward, components
+
+    @classmethod
+    def _make_observation(cls, game_state: GameState) -> np.ndarray:
+        player_x = min_max_normalize(game_state.player_pos_x, ARENA_MIN_X, ARENA_MAX_X)
+        player_y = min_max_normalize(game_state.player_pos_y, ARENA_MIN_Y, ARENA_MAX_Y)
+
+        player_vel_x = min_max_normalize(
+            game_state.player_vel_x, HERO_VEL_X_RANGE[0], HERO_VEL_X_RANGE[1]
+        )
+        player_vel_y = min_max_normalize(
+            game_state.player_vel_y, HERO_VEL_Y_RANGE[0], HERO_VEL_Y_RANGE[1]
+        )
+
+        player_health = game_state.player_health / PLAYER_MAX_HEALTH
+        player_silk = game_state.player_silk / PLAYER_MAX_SILK
+        player_grounded = float(game_state.player_grounded)
+        player_can_dash = float(game_state.player_can_dash)
+        player_facing_right = float(game_state.player_facing_right)
+        player_invincible = float(game_state.player_invincible)
+        player_can_attack = float(game_state.player_can_attack)
+        boss_x = min_max_normalize(game_state.boss_pos_x, ARENA_MIN_X, ARENA_MAX_X)
+        boss_y = min_max_normalize(game_state.boss_pos_y, ARENA_MIN_Y, ARENA_MAX_Y)
+
+        boss_vel_x = min_max_normalize(
+            game_state.boss_vel_x, BOSS_VEL_X_RANGE[0], BOSS_VEL_X_RANGE[1]
+        )
+        boss_vel_y = min_max_normalize(
+            game_state.boss_vel_y, BOSS_VEL_Y_RANGE[0], BOSS_VEL_Y_RANGE[1]
+        )
+
+        boss_health = game_state.boss_health / BOSS_MAX_HEALTH
+        boss_phase = game_state.boss_phase / BOSS_MAX_PHASE
+        boss_facing_right = float(game_state.boss_facing_right)
+
+        arena_width = ARENA_MAX_X - ARENA_MIN_X
+        rel_x = min_max_normalize(
+            (game_state.boss_pos_x - game_state.player_pos_x), -arena_width, arena_width
+        )
+
+        arena_height = ARENA_MAX_Y - ARENA_MIN_Y
+        rel_y = min_max_normalize(
+            (game_state.boss_pos_y - game_state.player_pos_y),
+            -arena_height,
+            arena_height,
+        )
+
+        distance = (
+            np.sqrt(
+                (game_state.boss_pos_x - game_state.player_pos_x) ** 2
+                + (game_state.boss_pos_y - game_state.player_pos_y) ** 2
+            )
+            / cls.MAX_DISTANCE
+        )
+        distance = np.clip(distance, 0.0, 1.0)
+
+        boss_anim_state = float(
+            np.clip(game_state.boss_animation_state, 0, NUM_BOSS_ANIMATION_STATES - 1)
+        )
+        boss_anim_progress = np.clip(game_state.boss_animation_progress, 0.0, 1.0)
+
+        player_anim_state = float(
+            np.clip(
+                game_state.player_animation_state, 0, NUM_PLAYER_ANIMATION_STATES - 1
+            )
+        )
+        player_anim_progress = np.clip(game_state.player_animation_progress, 0.0, 1.0)
+
+        state_obs = np.array(
+            [
+                player_x,
+                player_y,
+                player_vel_x,
+                player_vel_y,
+                player_health,
+                player_silk,
+                player_grounded,
+                player_can_dash,
+                player_facing_right,
+                player_invincible,
+                player_can_attack,
+                boss_x,
+                boss_y,
+                boss_vel_x,
+                boss_vel_y,
+                boss_health,
+                boss_phase,
+                boss_facing_right,
+                rel_x,
+                rel_y,
+                distance,
+                boss_anim_state,
+                boss_anim_progress,
+                player_anim_state,
+                player_anim_progress,
+            ],
+            dtype=np.float32,
+        )
+
+        raycast_obs = np.concatenate(
+            [game_state.raycast_distances, game_state.raycast_hit_types]
+        )
+
+        observe = np.concatenate([state_obs, raycast_obs.astype(np.float32)])
+        return observe
 
     def _is_terminated(self, game_state: GameState) -> bool:
         return game_state.boss_health <= 0 or game_state.player_health <= 0
