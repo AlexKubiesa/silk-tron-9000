@@ -1337,8 +1337,8 @@ public static class EpisodeResetter
 
         var sceneInfo = new GameManager.SceneLoadInfo
         {
-            SceneName = Constants.BossTowerScene,
-            EntryGateName = Constants.BossTowerEntryGate,
+            SceneName = Scenes.LaceTowerScene,
+            EntryGateName = Scenes.LaceTowerEntryGate,
             HeroLeaveDirection = GatePosition.unknown,
             EntryDelay = 0f,
             Visualization = GameManager.SceneLoadVisualizations.Default,

@@ -21,9 +21,14 @@ public static class Constants
     public const float BossSpawnX = 59.19379f;
     public const float BossSpawnY = 100.5931f;
 
-    public const string BossTowerScene = "Song_Tower_01";
-    public const string MenuTitleScene = "Menu_Title";
-    public const string BossTowerEntryGate = "door_cutsceneEndLaceTower";
-
     public const int ConsecutiveFrameThreshold = 3;
+}
+
+public static class Scenes
+{
+    public const string LaceTowerScene = "Song_Tower_01";
+    public const string MenuTitleScene = "Menu_Title";
+
+    public const string LaceTowerEntryGate = "door_cutsceneEndLaceTower";
+
 }

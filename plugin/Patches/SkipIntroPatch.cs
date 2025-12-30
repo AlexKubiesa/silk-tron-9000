@@ -19,7 +19,7 @@ internal static class SkipIntroPatch
 
     private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == Constants.MenuTitleScene)
+        if (scene.name == Scenes.MenuTitleScene)
         {
             GameManager.instance.StartCoroutine(ContinueGame());
         }
@@ -89,7 +89,7 @@ internal static class SkipIntroPatch
         internal static void Postfix()
         {
             var scene = SceneManager.GetActiveScene();
-            if (scene.name != Constants.BossTowerScene && scene.name != Constants.MenuTitleScene)
+            if (scene.name != Scenes.LaceTowerScene && scene.name != Scenes.MenuTitleScene)
             {
                 GameManager.instance.StartCoroutine(WaitForSceneReady());
             }
