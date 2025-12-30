@@ -549,8 +549,7 @@ if __name__ == "__main__":
             checkpoint_path=args.checkpoint,
             time_scale=4.0,
             device="cpu",
-            # Keep FX for Moss Mother, otherwise the room appears pitch black
-            no_fx=(args.boss != "MossMother"),
+            no_fx=True,
             seed=args.seed,
             dummy_env=args.dummy_env,
             n_envs=args.n_envs,

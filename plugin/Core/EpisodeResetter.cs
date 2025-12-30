@@ -20,12 +20,11 @@ public static class EpisodeResetter
             case "Lace":
                 _instance = new LaceEpisodeResetter();
                 break;
-            case "Moss Mother":
+            case "MossMother":
                 _instance = new MossMotherEpisodeResetter();
                 break;
             default:
-                Plugin.Logger.LogError($"No EpisodeResetter found for boss {CommandLineArgs.Boss.Name}");
-                break;
+                throw new System.Exception($"No EpisodeResetter found for boss {CommandLineArgs.Boss.Name}");
         }
     }
 

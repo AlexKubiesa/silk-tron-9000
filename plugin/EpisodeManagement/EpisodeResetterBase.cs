@@ -1365,6 +1365,8 @@ public class EpisodeResetterBase
             yield return new WaitForEndOfFrame();
         }
 
+        OnPlayerAcceptingInput();
+
         HeroController.instance.transform.position = CommandLineArgs.Boss.HeroSpawnPosition;
 
         yield return new WaitForEndOfFrame();
@@ -1528,4 +1530,6 @@ public class EpisodeResetterBase
             }
         }
     }
+
+    protected virtual void OnPlayerAcceptingInput() { }
 }
