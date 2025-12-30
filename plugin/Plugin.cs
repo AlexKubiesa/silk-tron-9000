@@ -61,6 +61,8 @@ public class Plugin : BaseUnityPlugin
         var backingField = typeof(ProjectBenchmark).GetField("<IsRunning>k__BackingField", BindingFlags.NonPublic | BindingFlags.Static);
         backingField?.SetValue(null, true);
 
+        EpisodeResetter.Initialize();
+
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 
