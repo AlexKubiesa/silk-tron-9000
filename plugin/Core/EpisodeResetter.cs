@@ -373,18 +373,19 @@ public static class EpisodeResetter
     {
         if (HeroController.instance != null)
         {
-            _heroSpawnPosition = new Vector3(Constants.HeroSpawnX, Constants.HeroSpawnY, 0f);
+            _heroSpawnPosition = CommandLineArgs.Boss.HeroSpawnPosition;
         }
 
         if (BossStateManager.CurrentBoss != null)
         {
             _bossSpawnPosition = BossStateManager.CurrentBoss.transform.position;
-            _bossInitialHp = Constants.LaceBossMaxHealth;
+            // TODO: Try getting initial HP from the boss's HealthManager
+            _bossInitialHp = CommandLineArgs.Boss.HP;
         }
         else
         {
-            _bossSpawnPosition = new Vector3(Constants.BossSpawnX, Constants.BossSpawnY, 0f);
-            _bossInitialHp = Constants.LaceBossMaxHealth;
+            _bossSpawnPosition = CommandLineArgs.Boss.BossSpawnPosition;
+            _bossInitialHp = CommandLineArgs.Boss.HP;
         }
 
         _initialStateCaptured = true;
@@ -1337,8 +1338,8 @@ public static class EpisodeResetter
 
         var sceneInfo = new GameManager.SceneLoadInfo
         {
-            SceneName = Scenes.LaceTowerScene,
-            EntryGateName = Scenes.LaceTowerEntryGate,
+            SceneName = CommandLineArgs.Boss.Scene,
+            EntryGateName = CommandLineArgs.Boss.EntryGate,
             HeroLeaveDirection = GatePosition.unknown,
             EntryDelay = 0f,
             Visualization = GameManager.SceneLoadVisualizations.Default,
@@ -1367,6 +1368,8 @@ public static class EpisodeResetter
 
             yield return new WaitForEndOfFrame();
         }
+
+        HeroController.instance.transform.position = CommandLineArgs.Boss.HeroSpawnPosition;
 
         yield return new WaitForEndOfFrame();
 

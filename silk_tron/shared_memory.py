@@ -211,11 +211,13 @@ class SilkSongSharedMemory:
 
     def __init__(
         self,
+        boss: str,
         id: int,
         time_scale: float = 1.0,
         no_fx: bool = False,
         timeout_ms: int | None = None,
     ):
+        self.boss = boss
         self.id = id
         self.time_scale = time_scale
         self.no_fx = no_fx
@@ -227,7 +229,6 @@ class SilkSongSharedMemory:
         if id < 1:
             raise ValueError(f"Invalid environment ID: {id}. Must be >= 1.")
 
-        game_path = self.get_game_path(id)
         shm_name = f"{self.MEMORY_NAME}_{id}"
 
         self.shm = shared_memory.SharedMemory(
@@ -237,33 +238,7 @@ class SilkSongSharedMemory:
         )
         self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
         logging.info(f"Created shared memory: {shm_name}")
-
-        args = [game_path, "--id", str(id), "--time-scale", str(time_scale)]
-        if no_fx:
-            args.append("--no-fx")
-
-        game_dir = str(Path(game_path).parent)
-
-        logging.info(f"Launching game from: {game_path}")
-        logging.info(f"Time scale: {time_scale}, NoFx: {no_fx}")
-        env = os.environ.copy()
-        game_dir = Path(game_path).parent
-
-        env["LD_PRELOAD"] = "./libdoorstop.so"
-        env["LD_LIBRARY_PATH"] = f".:{env.get('LD_LIBRARY_PATH', '')}"
-        env["DOORSTOP_ENABLED"] = "1"
-        env["DOORSTOP_TARGET_ASSEMBLY"] = str(
-            game_dir / "BepInEx" / "core" / "BepInEx.Preloader.dll"
-        )
-        env["__GL_SYNC_TO_VBLANK"] = "0"
-        env["vblank_mode"] = "0"
-
-        self.process = subprocess.Popen(args, env=env, cwd=game_dir)
-
-        logging.info(f"Waiting for game to connect...")
-        self.wait_for_state(StateType.READY, timeout_ms=60000)
-        logging.info(f"Game connected!")
-
+        self._start_game()
         _active_instances.append(self)
 
     def read_state(self) -> StateType:
@@ -403,9 +378,19 @@ class SilkSongSharedMemory:
             self.process = None
 
         self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
+        self._start_game()
 
+    def _start_game(self):
         game_path = self.get_game_path(self.id)
-        args = [game_path, "--id", str(self.id), "--time-scale", str(self.time_scale)]
+        args = [
+            game_path,
+            "--boss",
+            self.boss,
+            "--id",
+            str(self.id),
+            "--time-scale",
+            str(self.time_scale),
+        ]
         if self.no_fx:
             args.append("--no-fx")
 

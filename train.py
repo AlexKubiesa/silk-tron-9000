@@ -125,7 +125,11 @@ def load_rng_state(checkpoint_path: str) -> bool:
 
 
 def make_env(
-    env_id: int, time_scale: float = 1.0, no_fx: bool = False, dummy_env: bool = False
+    boss: str,
+    env_id: int,
+    time_scale: float = 1.0,
+    no_fx: bool = False,
+    dummy_env: bool = False,
 ) -> gym.Env:
     import torch
 
@@ -134,13 +138,14 @@ def make_env(
     if dummy_env:
         env = DummySilksongBossEnv()
     else:
-        env = SilksongBossEnv(env_id, time_scale=time_scale, no_fx=no_fx)
+        env = SilksongBossEnv(boss, env_id, time_scale=time_scale, no_fx=no_fx)
 
     env = MyMonitor(env)
     return env
 
 
 def make_vec_env(
+    boss: str,
     n_envs: int = 1,
     time_scale: float = 1.0,
     no_fx: bool = False,
@@ -156,6 +161,7 @@ def make_vec_env(
     env_fns = [
         partial(
             make_env,
+            boss=boss,
             env_id=start_id + i,
             time_scale=time_scale,
             no_fx=no_fx,
@@ -171,6 +177,7 @@ def make_vec_env(
 
 
 def train(
+    boss: str = "Lace",
     total_timesteps: int = 10_000_000,
     learning_rate: float = 3e-4,
     n_steps: int = 2048,
@@ -264,7 +271,11 @@ def train(
 
     print(f"\nLaunching game instance...")
     env = make_vec_env(
-        n_envs=n_envs, time_scale=time_scale, no_fx=no_fx, dummy_env=dummy_env
+        boss=boss,
+        n_envs=n_envs,
+        time_scale=time_scale,
+        no_fx=no_fx,
+        dummy_env=dummy_env,
     )
 
     # Load VecNormalize if resuming
@@ -389,13 +400,19 @@ def train(
 
 
 def evaluate(
-    model_path: str, n_episodes: int = 10, time_scale: float = 1.0, no_fx: bool = False
+    model_path: str,
+    boss: str,
+    n_episodes: int = 10,
+    time_scale: float = 1.0,
+    no_fx: bool = False,
 ):
     print(f"\nEvaluating model: {model_path}")
     print(f"Time scale: {time_scale}")
     print(f"NoFx: {no_fx}")
 
-    env = DummyVecEnv([partial(make_env, env_id=1, time_scale=time_scale, no_fx=no_fx)])
+    env = DummyVecEnv(
+        [partial(make_env, boss=boss, env_id=1, time_scale=time_scale, no_fx=no_fx)]
+    )
 
     # Find corresponding VecNormalize file
     vecnormalize_path = find_vecnormalize_path(model_path)
@@ -455,6 +472,13 @@ if __name__ == "__main__":
     parser.add_argument("--n-envs", type=int, default=1)
 
     parser.add_argument(
+        "--boss",
+        type=str,
+        default="Lace",
+        help="Name of the boss to train against",
+        choices=["Lace", "MossMother"],
+    )
+    parser.add_argument(
         "--total-timesteps",
         type=int,
         default=10_000_000,
@@ -505,9 +529,10 @@ if __name__ == "__main__":
     if args.eval:
         if not args.checkpoint:
             parser.error("--eval requires --checkpoint")
-        evaluate(args.checkpoint, n_episodes=10, time_scale=1.0)
+        evaluate(args.checkpoint, args.boss, n_episodes=10, time_scale=1.0)
     else:
         train(
+            boss=args.boss,
             total_timesteps=args.total_timesteps,
             learning_rate=args.learning_rate,
             n_steps=args.n_steps,
@@ -524,7 +549,8 @@ if __name__ == "__main__":
             checkpoint_path=args.checkpoint,
             time_scale=4.0,
             device="cpu",
-            no_fx=True,
+            # Keep FX for Moss Mother, otherwise the room appears pitch black
+            no_fx=(args.boss != "MossMother"),
             seed=args.seed,
             dummy_env=args.dummy_env,
             n_envs=args.n_envs,

@@ -74,7 +74,7 @@ public static class GameStateCollector
             state.bossVelY = bossRb != null ? bossRb.linearVelocity.y : 0f;
 
             state.bossHealth = boss.hp;
-            state.bossMaxHealth = Constants.LaceBossMaxHealth;
+            state.bossMaxHealth = CommandLineArgs.Boss.HP;
 
             BossStateManager.UpdateBossPhase();
             state.bossPhase = BossStateManager.CurrentPhase;

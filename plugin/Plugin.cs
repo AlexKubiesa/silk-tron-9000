@@ -77,7 +77,6 @@ public class Plugin : BaseUnityPlugin
         CommandLineArgs.Parse();
         InstanceId = CommandLineArgs.Id;
         ActionManager.IsAgentControlEnabled = !CommandLineArgs.Manual;
-        Logger.LogInfo($"Instance ID: {CommandLineArgs.Id}, Time scale: {CommandLineArgs.TimeScale}, Manual: {CommandLineArgs.Manual}, NoFx: {CommandLineArgs.NoFx}");
     }
 
     private void Update()

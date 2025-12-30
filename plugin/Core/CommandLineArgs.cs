@@ -8,6 +8,7 @@ public static class CommandLineArgs
     public static float TimeScale { get; private set; } = 1.0f;
     public static bool Manual { get; private set; } = false;
     public static bool NoFx { get; private set; } = false;
+    public static Boss Boss { get; private set; } = Boss.Bosses["Lace"];
 
     public static void Parse()
     {
@@ -19,6 +20,7 @@ public static class CommandLineArgs
                 if (int.TryParse(args[i + 1], out int id))
                 {
                     Id = id;
+                    Plugin.Logger.LogInfo($"Set Instance ID to {Id}");
                 }
             }
             else if (args[i] == "--time-scale" && i + 1 < args.Length)
@@ -26,15 +28,26 @@ public static class CommandLineArgs
                 if (float.TryParse(args[i + 1], out float timeScale))
                 {
                     TimeScale = timeScale;
+                    Plugin.Logger.LogInfo($"Set Time Scale to {TimeScale}");
                 }
             }
             else if (args[i] == "--manual")
             {
                 Manual = true;
+                Plugin.Logger.LogInfo("Set Manual mode to true");
             }
             else if (args[i] == "--no-fx")
             {
                 NoFx = true;
+                Plugin.Logger.LogInfo("Set NoFx mode to true");
+            }
+            else if (args[i] == "--boss" && i + 1 < args.Length)
+            {
+                if (Boss.Bosses.TryGetValue(args[i + 1], out Boss boss))
+                {
+                    Boss = boss;
+                    Plugin.Logger.LogInfo($"Set Boss to {boss.Name}");
+                }
             }
         }
     }
