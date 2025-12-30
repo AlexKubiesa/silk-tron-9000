@@ -5,12 +5,12 @@ from gymnasium import spaces
 import numpy as np
 from numpy.typing import NDArray
 from stable_baselines3.common.monitor import Monitor
+from silk_tron.bosses import BOSSES
 from silk_tron.constants import (
     ARENA_MAX_X,
     ARENA_MAX_Y,
     ARENA_MIN_X,
     ARENA_MIN_Y,
-    BOSS_MAX_HEALTH,
     BOSS_MAX_PHASE,
     BOSS_VEL_X_RANGE,
     BOSS_VEL_Y_RANGE,
@@ -42,6 +42,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
     ):
         super().__init__()
 
+        self.boss = BOSSES[boss]
         self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(OBSERVATION_DIM,), dtype=np.float32
@@ -142,7 +143,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         components = {}
 
         boss_dmg = self.prev_boss_health - game_state.boss_health
-        components["boss_damage"] = boss_dmg / BOSS_MAX_HEALTH
+        components["boss_damage"] = boss_dmg / self.boss.max_hp
 
         player_dmg = self.prev_player_health - game_state.player_health
         components["player_damage"] = -(player_dmg / PLAYER_MAX_HEALTH) * 0.1
@@ -169,8 +170,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         components = None
         return reward, components
 
-    @classmethod
-    def _make_observation(cls, game_state: GameState) -> np.ndarray:
+    def _make_observation(self, game_state: GameState) -> np.ndarray:
         player_x = min_max_normalize(game_state.player_pos_x, ARENA_MIN_X, ARENA_MAX_X)
         player_y = min_max_normalize(game_state.player_pos_y, ARENA_MIN_Y, ARENA_MAX_Y)
 
@@ -198,7 +198,12 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             game_state.boss_vel_y, BOSS_VEL_Y_RANGE[0], BOSS_VEL_Y_RANGE[1]
         )
 
-        boss_health = game_state.boss_health / BOSS_MAX_HEALTH
+        boss_health = game_state.boss_health / self.boss.max_hp
+
+        # Mask boss health for Moss Mother battle - it seems to help training
+        if self.boss.name == "MossMother":
+            boss_health = 0.0
+
         boss_phase = game_state.boss_phase / BOSS_MAX_PHASE
         boss_facing_right = float(game_state.boss_facing_right)
 
@@ -219,7 +224,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
                 (game_state.boss_pos_x - game_state.player_pos_x) ** 2
                 + (game_state.boss_pos_y - game_state.player_pos_y) ** 2
             )
-            / cls.MAX_DISTANCE
+            / self.MAX_DISTANCE
         )
         distance = np.clip(distance, 0.0, 1.0)
 
