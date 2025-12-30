@@ -38,6 +38,9 @@ public static class ButtonControlPatch
 {
     public static bool Prefix(ButtonControl __instance, ref bool __result)
     {
+        if (!ActionManager.IsAgentControlEnabled)
+            return true;
+
         string keyName = __instance.name;
 
         switch (keyName)
