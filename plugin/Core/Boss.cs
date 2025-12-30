@@ -30,7 +30,7 @@ public class Boss(
                 scene: "Tut_03",
                 entryGate: "right1",
                 heroSpawnPosition: new Vector3(49.71f, 17.57f, 0f),
-                bossSpawnPosition: new Vector3(54.77f, 0f, 0f),
+                bossSpawnPosition: new Vector3(54.77f, 25.76f, 0f),
                 hp: 120)
         }
     };
