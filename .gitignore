@@ -24,6 +24,7 @@ plugin/Directory.Build.props
 
 # Experiment artifacts
 experiments/
+pretrained/
 
 # Visual Studio Code
 .vscode/*
