@@ -26,6 +26,9 @@ plugin/Directory.Build.props
 experiments/
 pretrained/
 
+# Hyperparameter tuning
+hyperparameters/
+
 # Visual Studio Code
 .vscode/*
 !.vscode/settings.json

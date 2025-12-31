@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 
@@ -13,8 +13,9 @@ from optuna.samplers import TPESampler
 import torch
 import torch.nn as nn
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.vec_env import VecNormalize
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
+from stable_baselines3.common.vec_env import VecNormalize, VecEnv
+import gymnasium as gym
 
 from train import make_vec_env, reset_env_id_counter
 from silk_tron.networks import MultiHeadFeatureExtractor
@@ -52,33 +53,112 @@ def get_hyperparameters(trial: optuna.Trial) -> Dict[str, Any]:
     }
 
 
+class DummyCallback(BaseCallback):
+    def _on_step(self) -> bool:
+        return True
+
+
 class TrialEvalCallback(EvalCallback):
-    def __init__(self, trial: optuna.Trial, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    """
+    Callback used for evaluating and reporting a trial to Optuna.
+
+    This callback extends EvalCallback to work with Optuna trials,
+    allowing for trial pruning and reporting of evaluation results
+    to the Optuna study.
+
+    Attributes
+    ----------
+    trial : optuna.Trial
+        The Optuna trial associated with this evaluation.
+    eval_idx : int
+        Current evaluation index for reporting to Optuna.
+    is_pruned : bool
+        Whether the trial has been pruned.
+    """
+
+    def __init__(
+        self,
+        eval_env: gym.Env | VecEnv,
+        trial: optuna.Trial,
+        n_eval_episodes: int = 5,
+        eval_freq: int = 10000,
+        deterministic: bool = True,
+        verbose: int = 0,
+        best_model_save_path: Optional[str] = None,
+        log_path: Optional[str] = None,
+        callback_after_eval: Optional[BaseCallback] = None,
+    ) -> None:
+        """
+        Initialize the TrialEvalCallback.
+
+        Parameters
+        ----------
+        eval_env : gym.Env
+            The environment used for evaluation.
+        trial : optuna.Trial
+            The Optuna trial for this training run.
+        n_eval_episodes : int, optional
+            Number of episodes to evaluate (default is 5).
+        eval_freq : int, optional
+            Evaluate every `eval_freq` timesteps (default is 10000).
+        deterministic : bool, optional
+            Whether to use deterministic actions during evaluation (default is True).
+        verbose : int, optional
+            Verbosity level (default is 0).
+        best_model_save_path : Optional[str], optional
+            Path to save the best model (default is None).
+        log_path : Optional[str], optional
+            Path to save evaluation logs (default is None).
+        callback_after_eval : Optional[BaseCallback], optional
+            Additional callback to run after evaluation (default is None).
+        """
+        super().__init__(
+            eval_env=eval_env,
+            n_eval_episodes=n_eval_episodes,
+            eval_freq=eval_freq,
+            deterministic=deterministic,
+            verbose=verbose,
+            best_model_save_path=best_model_save_path,
+            log_path=log_path,
+            callback_after_eval=callback_after_eval,
+        )
         self.trial = trial
         self.eval_idx = 0
         self.is_pruned = False
         self.all_mean_rewards = []
 
     def _on_step(self) -> bool:
-        result = super()._on_step()
+        """
+        Called at each training step to perform evaluation and report to Optuna.
 
-        if self.eval_idx > 0 and self.last_mean_reward is not None:
+        Returns
+        -------
+        bool
+            True to continue training, False to stop.
+        """
+        continue_training = True
+
+        # Perform evaluation at specified frequency
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            continue_training = super()._on_step()
+            self.eval_idx += 1
+
+            # Store the mean reward
+            if self.last_mean_reward is not None:
+                self.all_mean_rewards.append(self.last_mean_reward)
+
+            # Report the best mean reward to Optuna
             self.trial.report(self.last_mean_reward, self.eval_idx)
 
+            # Prune trial if needed
             if self.trial.should_prune():
                 self.is_pruned = True
                 return False
 
-        return result
-
-    def _on_event(self) -> None:
-        super()._on_event()
-        self.eval_idx += 1
-        if self.last_mean_reward is not None:
-            self.all_mean_rewards.append(self.last_mean_reward)
+        return continue_training
 
     def get_average_reward(self) -> float:
+        """Return average of all mean rewards across evaluations."""
         if not self.all_mean_rewards:
             return float("-inf")
         return sum(self.all_mean_rewards) / len(self.all_mean_rewards)
@@ -135,7 +215,7 @@ def objective(
         vf_coef=params["vf_coef"],
         max_grad_norm=params["max_grad_norm"],
         verbose=0,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device="cpu",
         policy_kwargs=policy_kwargs,
     )
 
