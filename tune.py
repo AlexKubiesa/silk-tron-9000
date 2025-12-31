@@ -347,21 +347,21 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Hyperparameter tuning for PPO")
-    parser.add_argument("--n_trials", type=int, default=20, help="Number of trials")
+    parser.add_argument("--n-trials", type=int, default=20, help="Number of trials")
     parser.add_argument(
-        "--n_envs", type=int, default=1, help="Number of parallel environments"
+        "--n-envs", type=int, default=1, help="Number of parallel environments"
     )
     parser.add_argument(
         "--timesteps", type=int, default=100_000, help="Timesteps per trial"
     )
     parser.add_argument(
-        "--eval_freq", type=int, default=20_000, help="Evaluation frequency"
+        "--eval-freq", type=int, default=20_000, help="Evaluation frequency"
     )
     parser.add_argument(
-        "--n_eval_episodes", type=int, default=10, help="Episodes per evaluation"
+        "--n-eval-episodes", type=int, default=10, help="Episodes per evaluation"
     )
-    parser.add_argument("--time_scale", type=float, default=4.0)
-    parser.add_argument("--study_name", type=str, default="silk_tron")
+    parser.add_argument("--time-scale", type=float, default=4.0)
+    parser.add_argument("--study-name", type=str, default="silk_tron")
     parser.add_argument(
         "--storage",
         type=str,
