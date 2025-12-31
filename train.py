@@ -13,6 +13,7 @@ from datetime import datetime
 import json
 import gymnasium as gym
 from torchinfo import summary
+import yaml
 
 
 from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
@@ -31,6 +32,13 @@ load_dotenv(Path(__file__).parent / ".env")
 def reset_env_id_counter():
     global _next_env_id
     _next_env_id = 1
+
+
+def load_config(config_path: str) -> dict:
+    """Load hyperparameters from YAML config file."""
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    return config
 
 
 def create_run_directory(
@@ -466,52 +474,23 @@ def evaluate(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--eval", action="store_true")
-    parser.add_argument("--checkpoint", type=str)
-    parser.add_argument("--n-envs", type=int, default=1)
-
+    parser = argparse.ArgumentParser(
+        description="Train a PPO agent on Silksong boss fights"
+    )
     parser.add_argument(
-        "--boss",
+        "--config",
         type=str,
-        default="Lace",
-        help="Name of the boss to train against",
-        choices=["Lace", "MossMother"],
+        required=True,
+        help="Path to YAML config file containing hyperparameters (e.g., configs/lace.yaml)",
+    )
+    parser.add_argument("--eval", action="store_true", help="Evaluate a trained model")
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        help="Path to checkpoint to resume training or evaluate",
     )
     parser.add_argument(
-        "--total-timesteps",
-        type=int,
-        default=10_000_000,
-        help="Total number of timesteps for training",
-    )
-    parser.add_argument(
-        "--learning-rate",
-        type=float,
-        default=5e-4,
-        help="Learning rate for the optimizer",
-    )
-    parser.add_argument(
-        "--n-steps",
-        type=int,
-        default=2048,
-        help="Number of steps to run for each environment per update",
-    )
-    parser.add_argument(
-        "--n-epochs",
-        type=int,
-        default=4,
-        help="Number of epochs to run when optimizing the surrogate loss",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=123,
-        help="Random number generator seed for policy network reproducibility. The environment is not affected by the random seed. The seed is ignored if continuing from a checkpoint.",
-    )
-    parser.add_argument(
-        "--dummy-env",
-        action="store_true",
-        help="Use reproducible dummy env for testing purposes",
+        "--n-envs", type=int, default=1, help="Number of parallel environments"
     )
     parser.add_argument(
         "--experiments-dir",
@@ -526,31 +505,47 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # Load config
+    config = load_config(args.config)
+    print(f"Loaded config from: {args.config}")
+    print(f"Config: {json.dumps(config, indent=2)}")
+
     if args.eval:
         if not args.checkpoint:
             parser.error("--eval requires --checkpoint")
-        evaluate(args.checkpoint, args.boss, n_episodes=10, time_scale=1.0)
+        evaluate(
+            args.checkpoint,
+            config["boss"],
+            n_episodes=10,
+            time_scale=config.get("time_scale", 1.0),
+            no_fx=False,
+        )
     else:
+        # Extract network architecture params
+        features_dim = config.get("features_dim", 256)
+        pi_layers = config.get("pi_layers", [128])
+        vf_layers = config.get("vf_layers", [128])
+
         train(
-            boss=args.boss,
-            total_timesteps=args.total_timesteps,
-            learning_rate=args.learning_rate,
-            n_steps=args.n_steps,
-            batch_size=512,
-            n_epochs=args.n_epochs,
-            gamma=0.99,
-            gae_lambda=0.95,
-            clip_range=0.1,
-            ent_coef=0.03,
-            vf_coef=0.5,
-            max_grad_norm=0.3,
+            boss=config["boss"],
+            total_timesteps=config.get("total_timesteps", 10_000_000),
+            learning_rate=config.get("learning_rate", 5e-4),
+            n_steps=config.get("n_steps", 2048),
+            batch_size=config.get("batch_size", 512),
+            n_epochs=config.get("n_epochs", 4),
+            gamma=config.get("gamma", 0.99),
+            gae_lambda=config.get("gae_lambda", 0.95),
+            clip_range=config.get("clip_range", 0.1),
+            ent_coef=config.get("ent_coef", 0.03),
+            vf_coef=config.get("vf_coef", 0.5),
+            max_grad_norm=config.get("max_grad_norm", 0.3),
             experiments_dir=args.experiments_dir,
             run_name=args.run_name,
             checkpoint_path=args.checkpoint,
-            time_scale=4.0,
+            time_scale=config.get("time_scale", 4.0),
             device="cpu",
-            no_fx=True,
-            seed=args.seed,
-            dummy_env=args.dummy_env,
+            no_fx=config.get("no_fx", True),
+            seed=config.get("seed"),
+            dummy_env=False,
             n_envs=args.n_envs,
         )

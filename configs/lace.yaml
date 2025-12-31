@@ -1,0 +1,28 @@
+# Hyperparameter configuration for Lace boss fight
+# These are the default training parameters that can be overridden via CLI
+
+# Scenario
+boss: Lace
+
+# Training configuration
+total_timesteps: 10000000
+time_scale: 4.0
+no_fx: true
+seed: 123  # null means random seed
+
+# PPO hyperparameters
+learning_rate: 5e-4
+n_steps: 2048
+batch_size: 512
+n_epochs: 4
+gamma: 0.99
+gae_lambda: 0.95
+clip_range: 0.1
+ent_coef: 0.03
+vf_coef: 0.5
+max_grad_norm: 0.3
+
+# Network architecture
+features_dim: 256
+pi_layers: [128]
+vf_layers: [128]
