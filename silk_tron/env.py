@@ -7,10 +7,6 @@ from numpy.typing import NDArray
 from stable_baselines3.common.monitor import Monitor
 from silk_tron.bosses import BOSSES
 from silk_tron.constants import (
-    ARENA_MAX_X,
-    ARENA_MAX_Y,
-    ARENA_MIN_X,
-    ARENA_MIN_Y,
     BOSS_MAX_PHASE,
     BOSS_VEL_X_RANGE,
     BOSS_VEL_Y_RANGE,
@@ -33,16 +29,16 @@ def min_max_normalize(value: float, min_value: float, max_value: float) -> float
 
 
 class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
-    MAX_DISTANCE = np.sqrt(
-        (ARENA_MAX_X - ARENA_MIN_X) ** 2 + (ARENA_MAX_Y - ARENA_MIN_Y) ** 2
-    )
-
     def __init__(
         self, boss: str, id: int = 1, time_scale: float = 1.0, no_fx: bool = False
     ):
         super().__init__()
 
         self.boss = BOSSES[boss]
+        self.arena_width = self.boss.arena_max_x - self.boss.arena_min_x
+        self.arena_height = self.boss.arena_max_y - self.boss.arena_min_y
+        self.max_distance = np.sqrt(self.arena_width**2 + self.arena_height**2)
+
         self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(OBSERVATION_DIM,), dtype=np.float32
@@ -171,8 +167,12 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         return reward, components
 
     def _make_observation(self, game_state: GameState) -> np.ndarray:
-        player_x = min_max_normalize(game_state.player_pos_x, ARENA_MIN_X, ARENA_MAX_X)
-        player_y = min_max_normalize(game_state.player_pos_y, ARENA_MIN_Y, ARENA_MAX_Y)
+        player_x = min_max_normalize(
+            game_state.player_pos_x, self.boss.arena_min_x, self.boss.arena_max_x
+        )
+        player_y = min_max_normalize(
+            game_state.player_pos_y, self.boss.arena_min_y, self.boss.arena_max_y
+        )
 
         player_vel_x = min_max_normalize(
             game_state.player_vel_x, HERO_VEL_X_RANGE[0], HERO_VEL_X_RANGE[1]
@@ -188,8 +188,12 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         player_facing_right = float(game_state.player_facing_right)
         player_invincible = float(game_state.player_invincible)
         player_can_attack = float(game_state.player_can_attack)
-        boss_x = min_max_normalize(game_state.boss_pos_x, ARENA_MIN_X, ARENA_MAX_X)
-        boss_y = min_max_normalize(game_state.boss_pos_y, ARENA_MIN_Y, ARENA_MAX_Y)
+        boss_x = min_max_normalize(
+            game_state.boss_pos_x, self.boss.arena_min_x, self.boss.arena_max_x
+        )
+        boss_y = min_max_normalize(
+            game_state.boss_pos_y, self.boss.arena_min_y, self.boss.arena_max_y
+        )
 
         boss_vel_x = min_max_normalize(
             game_state.boss_vel_x, BOSS_VEL_X_RANGE[0], BOSS_VEL_X_RANGE[1]
@@ -206,16 +210,16 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         boss_phase = game_state.boss_phase / BOSS_MAX_PHASE
         boss_facing_right = float(game_state.boss_facing_right)
 
-        arena_width = ARENA_MAX_X - ARENA_MIN_X
         rel_x = min_max_normalize(
-            (game_state.boss_pos_x - game_state.player_pos_x), -arena_width, arena_width
+            (game_state.boss_pos_x - game_state.player_pos_x),
+            -self.arena_width,
+            self.arena_width,
         )
 
-        arena_height = ARENA_MAX_Y - ARENA_MIN_Y
         rel_y = min_max_normalize(
             (game_state.boss_pos_y - game_state.player_pos_y),
-            -arena_height,
-            arena_height,
+            -self.arena_height,
+            self.arena_height,
         )
 
         distance = (
@@ -223,7 +227,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
                 (game_state.boss_pos_x - game_state.player_pos_x) ** 2
                 + (game_state.boss_pos_y - game_state.player_pos_y) ** 2
             )
-            / self.MAX_DISTANCE
+            / self.max_distance
         )
         distance = np.clip(distance, 0.0, 1.0)
 
