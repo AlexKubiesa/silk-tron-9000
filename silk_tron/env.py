@@ -8,8 +8,6 @@ from stable_baselines3.common.monitor import Monitor
 from silk_tron.bosses import BOSSES
 from silk_tron.constants import (
     BOSS_MAX_PHASE,
-    BOSS_VEL_X_RANGE,
-    BOSS_VEL_Y_RANGE,
     HERO_VEL_X_RANGE,
     HERO_VEL_Y_RANGE,
     MAX_EPISODE_STEPS,
@@ -196,10 +194,10 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         )
 
         boss_vel_x = min_max_normalize(
-            game_state.boss_vel_x, BOSS_VEL_X_RANGE[0], BOSS_VEL_X_RANGE[1]
+            game_state.boss_vel_x, self.boss.vel_x_range[0], self.boss.vel_x_range[1]
         )
         boss_vel_y = min_max_normalize(
-            game_state.boss_vel_y, BOSS_VEL_Y_RANGE[0], BOSS_VEL_Y_RANGE[1]
+            game_state.boss_vel_y, self.boss.vel_y_range[0], self.boss.vel_y_range[1]
         )
 
         # Ignoring the boss health seems to give slightly better results for
