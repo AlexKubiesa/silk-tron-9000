@@ -86,6 +86,7 @@ class TrialEvalCallback(EvalCallback):
 
 def objective(
     trial: optuna.Trial,
+    boss: str,
     n_envs: int,
     timesteps_per_trial: int,
     eval_freq: int,
@@ -104,10 +105,10 @@ def objective(
         print(f"  {key}: {value}")
     print(f"{'='*60}\n")
 
-    env = make_vec_env(n_envs=n_envs, time_scale=time_scale, no_fx=True)
+    env = make_vec_env(boss=boss, n_envs=n_envs, time_scale=time_scale, no_fx=True)
     env = VecNormalize(env, norm_obs=False, norm_reward=True)
 
-    eval_env = make_vec_env(n_envs=1, time_scale=time_scale, no_fx=True)
+    eval_env = make_vec_env(boss=boss, n_envs=1, time_scale=time_scale, no_fx=True)
     eval_env = VecNormalize(eval_env, norm_obs=False, norm_reward=False, training=False)
 
     policy_kwargs = dict(
@@ -172,6 +173,7 @@ def objective(
 
 
 def tune(
+    boss: str,
     n_trials: int = 30,
     n_envs: int = 1,
     timesteps_per_trial: int = 300_000,
@@ -210,6 +212,7 @@ def tune(
         study.optimize(
             lambda trial: objective(
                 trial,
+                boss=boss,
                 n_envs=n_envs,
                 timesteps_per_trial=timesteps_per_trial,
                 eval_freq=eval_freq,
@@ -278,7 +281,7 @@ if __name__ == "__main__":
         "--n_eval_episodes", type=int, default=10, help="Episodes per evaluation"
     )
     parser.add_argument("--time_scale", type=float, default=4.0)
-    parser.add_argument("--study_name", type=str, default="silksong")
+    parser.add_argument("--study_name", type=str, default="silk_tron")
     parser.add_argument(
         "--storage",
         type=str,
@@ -287,9 +290,18 @@ if __name__ == "__main__":
     )
     parser.add_argument("--output_dir", type=str, default="./hyperparameters")
 
+    parser.add_argument(
+        "--boss",
+        type=str,
+        default="Lace",
+        help="Name of the boss to train against",
+        choices=["Lace", "MossMother"],
+    )
+
     args = parser.parse_args()
 
     tune(
+        boss=args.boss,
         n_trials=args.n_trials,
         n_envs=args.n_envs,
         timesteps_per_trial=args.timesteps,
