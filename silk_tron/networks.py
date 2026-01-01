@@ -127,16 +127,6 @@ class TensorboardCallback(BaseCallback):
         self.lowest_boss_hps = deque(maxlen=buffer_size)
         self.reward_components = defaultdict(partial(deque, maxlen=buffer_size))
         self.action_proportions = defaultdict(partial(deque, maxlen=buffer_size))
-        self.action_names = [
-            "horizontal_movement",
-            "vertical_movement",
-            "jump",
-            "attack",
-            "dash",
-            "clawline",
-            "skill",
-            "heal",
-        ]
 
     def _on_step(self) -> bool:
         for i, info in enumerate(self.locals.get("infos", [])):
@@ -166,8 +156,8 @@ class TensorboardCallback(BaseCallback):
 
                 # Track action proportions
                 if action_counts is not None and total_steps > 0:
-                    for idx, action_name in enumerate(self.action_names):
-                        proportion = action_counts[idx] / total_steps
+                    for action_name, count in action_counts.items():
+                        proportion = count / total_steps
                         self.action_proportions[action_name].append(proportion)
 
             if (ep_info := info.get("episode")) is not None:

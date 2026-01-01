@@ -42,6 +42,19 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             low=-np.inf, high=np.inf, shape=(OBSERVATION_DIM,), dtype=np.float32
         )
 
+        self.action_names = [
+            "left",
+            "right",
+            "up",
+            "down",
+            "jump",
+            "attack",
+            "dash",
+            "clawline",
+            "skill",
+            "heal",
+        ]
+
         self.shm = SilkSongSharedMemory(boss, id, time_scale=time_scale, no_fx=no_fx)
 
     def reset(self, seed=None, options=None):
@@ -67,7 +80,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.prev_attack = 0
 
         # Action tracking
-        self.action_counts = np.zeros(8, dtype=np.int32)
+        self.action_counts = {name: 0 for name in self.action_names}
 
         observation = self._make_observation(game_state)
         reward, reward_components = self._default_reward()
@@ -346,9 +359,31 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
 
     def _track_actions(self, action: np.ndarray) -> None:
         """Track action statistics for logging."""
-        for i in range(len(self.action_counts)):
-            if action[i] != 0:
-                self.action_counts[i] += 1
+        # Track horizontal movement (left/right)
+        if action[0] == 1:  # left
+            self.action_counts["left"] += 1
+        elif action[0] == 2:  # right
+            self.action_counts["right"] += 1
+
+        # Track vertical movement (up/down)
+        if action[1] == 1:  # up
+            self.action_counts["up"] += 1
+        elif action[1] == 2:  # down
+            self.action_counts["down"] += 1
+
+        # Track other actions (jump, attack, dash, clawline, skill, heal)
+        if action[2] != 0:
+            self.action_counts["jump"] += 1
+        if action[3] != 0:
+            self.action_counts["attack"] += 1
+        if action[4] != 0:
+            self.action_counts["dash"] += 1
+        if action[5] != 0:
+            self.action_counts["clawline"] += 1
+        if action[6] != 0:
+            self.action_counts["skill"] += 1
+        if action[7] != 0:
+            self.action_counts["heal"] += 1
 
     def close(self):
         if hasattr(self, "shm") and self.shm is not None:
