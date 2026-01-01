@@ -89,6 +89,11 @@ class GameState:
     raycast_distances: np.ndarray
     raycast_hit_types: np.ndarray
 
+    def __post_init__(self):
+        # Ensure boss health is non-negative
+        if self.boss_health < 0:
+            self.boss_health = 0
+
 
 class SilkSongSharedMemory:
     MEMORY_NAME = "silk_tron"

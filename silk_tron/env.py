@@ -120,7 +120,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         terminated = self._is_terminated(game_state)
         truncated = self._is_truncated(game_state)
 
-        self.prev_boss_health = max(0, game_state.boss_health)
+        self.prev_boss_health = game_state.boss_health
         self.prev_player_health = game_state.player_health
         self.prev_player_silk = game_state.player_silk
 
@@ -149,7 +149,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
     ) -> tuple[float, dict[str, float]]:
         components = {}
 
-        boss_dmg = self.prev_boss_health - max(0, game_state.boss_health)
+        boss_dmg = self.prev_boss_health - game_state.boss_health
         components["boss_damage"] = boss_dmg / self.boss.max_hp
 
         player_dmg = self.prev_player_health - game_state.player_health

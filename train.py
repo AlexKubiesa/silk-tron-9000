@@ -42,7 +42,7 @@ def load_config(config_path: str) -> dict:
 
 
 def create_run_directory(
-    base_dir: str, run_name: str | None = None
+    base_dir: str, run_name: str | None = None, config_name: str | None = None
 ) -> tuple[str, str, str]:
     """Create a run directory with timestamp.
 
@@ -53,7 +53,8 @@ def create_run_directory(
         dir_name = run_name
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        dir_name = f"run_{timestamp}"
+        prefix = config_name if config_name else "run"
+        dir_name = f"{prefix}_{timestamp}"
 
     run_dir = os.path.join(base_dir, dir_name)
     checkpoints_dir = os.path.join(run_dir, "checkpoints")
@@ -199,6 +200,7 @@ def train(
     max_grad_norm: float = 0.3,
     experiments_dir: str = "./experiments",
     run_name: str | None = None,
+    config_name: str | None = None,
     checkpoint_path: str | None = None,
     time_scale: float = 4.0,
     device: Union[torch.device, str] = "cpu",
@@ -231,7 +233,7 @@ def train(
     else:
         # Create new run directory
         run_dir, checkpoints_dir, log_dir = create_run_directory(
-            experiments_dir, run_name
+            experiments_dir, run_name, config_name
         )
 
     if resuming:
@@ -509,6 +511,9 @@ if __name__ == "__main__":
     config = load_config(args.config)
     print(f"Loaded config from: {args.config}")
     print(f"Config: {json.dumps(config, indent=2)}")
+    
+    # Extract config name from path (e.g., "configs/lace.yaml" -> "lace")
+    config_name = Path(args.config).stem
 
     if args.eval:
         if not args.checkpoint:
@@ -541,6 +546,7 @@ if __name__ == "__main__":
             max_grad_norm=config.get("max_grad_norm", 0.3),
             experiments_dir=args.experiments_dir,
             run_name=args.run_name,
+            config_name=config_name,
             checkpoint_path=args.checkpoint,
             time_scale=config.get("time_scale", 4.0),
             device="cpu",
