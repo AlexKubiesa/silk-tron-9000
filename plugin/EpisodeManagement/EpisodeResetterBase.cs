@@ -727,7 +727,7 @@ public class EpisodeResetterBase
         }
     }
 
-    private static void ResetBossState()
+    private void ResetBossState()
     {
         if (BossStateManager.CurrentBoss != null)
         {
@@ -1003,7 +1003,7 @@ public class EpisodeResetterBase
         }
     }
 
-    private static void ResetAllBossFsms(HealthManager boss)
+    protected virtual void ResetAllBossFsms(HealthManager boss)
     {
         var allFsms = boss.GetComponentsInChildren<PlayMakerFSM>(true);
 

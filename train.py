@@ -364,7 +364,7 @@ def train(
     summary(model.policy.action_net)
 
     checkpoint_callback = CustomCheckpointCallback(
-        save_freq=2048 * 5,  # 10240 steps
+        save_freq=10000,
         save_path=checkpoints_dir,
         name_prefix="rl_model",
         save_vecnormalize=True,

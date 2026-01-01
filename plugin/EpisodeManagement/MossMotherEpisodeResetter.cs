@@ -10,4 +10,19 @@ public class MossMotherEpisodeResetter : EpisodeResetterBase
         Object.Destroy(GameObject.Find("Moss Vine Cluster"));
         Object.Destroy(GameObject.Find("Moss Vine Cluster (1)"));
     }
+
+    protected override void ResetAllBossFsms(HealthManager boss)
+    {
+        base.ResetAllBossFsms(boss);
+
+        foreach (var fsm in boss.GetComponentsInChildren<PlayMakerFSM>(true))
+        {
+            // In the game's code, Moss Mother is called "Mossbone Mother".
+            if (fsm.FsmName == "Control" && fsm.gameObject.name == "Mossbone Mother")
+            {
+                // When soft-resetting, Moss Mother can get stuck in the "Slam RePos" state.
+                fsm.SetState("Idle");
+            }
+        }
+    }
 }
