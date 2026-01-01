@@ -165,8 +165,9 @@ class TensorboardCallback(BaseCallback):
                     for name, val in reward_components.items():
                         self.reward_components[name].append(val)
 
+        # Log mean reward components
         for name, vals in self.reward_components.items():
-            self.logger.record(f"rollout/ep_rew_cpt_means/{name}", np.mean(vals))
+            self.logger.record(f"rewards/mean_{name}", np.mean(vals))
 
         # Log action proportions
         for action_name, proportions in self.action_proportions.items():
