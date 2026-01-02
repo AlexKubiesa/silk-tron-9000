@@ -213,10 +213,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             game_state.boss_vel_y, self.boss.vel_y_range[0], self.boss.vel_y_range[1]
         )
 
-        # Ignoring the boss health seems to give slightly better results for
-        # Lace and much better results for Moss Mother
-        boss_health = 0.0
-        # boss_health = game_state.boss_health / self.boss.max_hp
+        boss_health = game_state.boss_health / self.boss.max_hp
 
         boss_phase = game_state.boss_phase / BOSS_MAX_PHASE
         boss_facing_right = float(game_state.boss_facing_right)
