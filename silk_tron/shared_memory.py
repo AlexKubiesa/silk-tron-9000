@@ -325,7 +325,7 @@ class SilkSongSharedMemory:
             timeout_ms = self.timeout_ms
 
         deadline_s = time.monotonic() + timeout_ms / 1000.0
-        poll_interval_s = 0.01
+        poll_interval_s = 0.005
 
         while True:
             current_state = self.read_state()
