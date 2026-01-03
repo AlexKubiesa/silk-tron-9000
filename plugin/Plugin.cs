@@ -39,9 +39,13 @@ public class Plugin : BaseUnityPlugin
         DontDestroyOnLoad(debugOverlayManager);
         debugOverlayManager.AddComponent<DebugOverlayManager>();
 
-        var bossProjectileManager = new GameObject("BossProjectileManager");
-        DontDestroyOnLoad(bossProjectileManager);
-        bossProjectileManager.AddComponent<BossProjectileManager>();
+        if (CommandLineArgs.Boss.Name == "Lace")
+        {
+            // TODO: RefreshProjectileCache takes 2 ms per call. Make it more efficient.
+            var bossProjectileManager = new GameObject("BossProjectileManager");
+            DontDestroyOnLoad(bossProjectileManager);
+            bossProjectileManager.AddComponent<BossProjectileManager>();
+        }
 
         var noFxManager = new GameObject("NoFxManager");
         DontDestroyOnLoad(noFxManager);
