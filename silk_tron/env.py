@@ -28,7 +28,19 @@ def min_max_normalize(value: float, min_value: float, max_value: float) -> float
 
 class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
     def __init__(
-        self, boss: str, id: int = 1, time_scale: float = 1.0, no_fx: bool = False
+        self,
+        boss: str,
+        id: int = 1,
+        time_scale: float = 1.0,
+        no_fx: bool = False,
+        boss_damage_coef: float = 1.0,
+        player_damage_coef: float = 0.1,
+        too_far_coef: float = 0.001,
+        too_far_threshold: float = 15.0,
+        too_close_coef: float = 0.001,
+        too_close_threshold: float = 1.0,
+        time_penalty_coef: float = 0.0001,
+        silk_coef: float = 0.0,
     ):
         super().__init__()
 
@@ -36,6 +48,16 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.arena_width = self.boss.arena_max_x - self.boss.arena_min_x
         self.arena_height = self.boss.arena_max_y - self.boss.arena_min_y
         self.max_distance = np.sqrt(self.arena_width**2 + self.arena_height**2)
+
+        # Reward coefficients and thresholds
+        self.boss_damage_coef = boss_damage_coef
+        self.player_damage_coef = player_damage_coef
+        self.too_far_coef = too_far_coef
+        self.too_far_threshold = too_far_threshold
+        self.too_close_coef = too_close_coef
+        self.too_close_threshold = too_close_threshold
+        self.time_penalty_coef = time_penalty_coef
+        self.silk_coef = silk_coef
 
         self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
         self.observation_space = spaces.Box(
@@ -150,23 +172,30 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         components = {}
 
         boss_dmg = self.prev_boss_health - game_state.boss_health
-        components["boss_damage"] = boss_dmg / self.boss.max_hp
+        components["boss_damage"] = (
+            boss_dmg / self.boss.max_hp
+        ) * self.boss_damage_coef
 
         player_dmg = self.prev_player_health - game_state.player_health
-        components["player_damage"] = -(player_dmg / PLAYER_MAX_HEALTH) * 0.1
+        components["player_damage"] = (
+            -(player_dmg / PLAYER_MAX_HEALTH) * self.player_damage_coef
+        )
+
+        silk_delta = game_state.player_silk - self.prev_player_silk
+        components["silk"] = (silk_delta / PLAYER_MAX_SILK) * self.silk_coef
 
         distance = np.sqrt(
             (game_state.player_pos_x - game_state.boss_pos_x) ** 2
             + (game_state.player_pos_y - game_state.boss_pos_y) ** 2
         )
 
-        too_far = distance > 15.0
-        too_close = distance < 1.0
+        too_far = distance > self.too_far_threshold
+        too_close = distance < self.too_close_threshold
 
-        components["too_far"] = -0.001 if too_far else 0.0
-        components["too_close"] = -0.001 if too_close else 0.0
+        components["too_far"] = -self.too_far_coef if too_far else 0.0
+        components["too_close"] = -self.too_close_coef if too_close else 0.0
 
-        components["time_penalty"] = -0.0001
+        components["time_penalty"] = -self.time_penalty_coef
 
         reward = sum(c for c in components.values())
 

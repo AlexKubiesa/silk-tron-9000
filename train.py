@@ -139,6 +139,14 @@ def make_env(
     time_scale: float = 1.0,
     no_fx: bool = False,
     dummy_env: bool = False,
+    boss_damage_coef: float = 1.0,
+    player_damage_coef: float = 0.1,
+    too_far_coef: float = 0.001,
+    too_far_threshold: float = 15.0,
+    too_close_coef: float = 0.001,
+    too_close_threshold: float = 1.0,
+    time_penalty_coef: float = 0.0001,
+    silk_coef: float = 0.0,
 ) -> gym.Env:
     import torch
 
@@ -147,7 +155,20 @@ def make_env(
     if dummy_env:
         env = DummySilksongBossEnv()
     else:
-        env = SilksongBossEnv(boss, env_id, time_scale=time_scale, no_fx=no_fx)
+        env = SilksongBossEnv(
+            boss,
+            env_id,
+            time_scale=time_scale,
+            no_fx=no_fx,
+            boss_damage_coef=boss_damage_coef,
+            player_damage_coef=player_damage_coef,
+            too_far_coef=too_far_coef,
+            too_far_threshold=too_far_threshold,
+            too_close_coef=too_close_coef,
+            too_close_threshold=too_close_threshold,
+            time_penalty_coef=time_penalty_coef,
+            silk_coef=silk_coef,
+        )
 
     env = MyMonitor(env)
     return env
@@ -159,6 +180,14 @@ def make_vec_env(
     time_scale: float = 1.0,
     no_fx: bool = False,
     dummy_env: bool = False,
+    boss_damage_coef: float = 1.0,
+    player_damage_coef: float = 0.1,
+    too_far_coef: float = 0.001,
+    too_far_threshold: float = 15.0,
+    too_close_coef: float = 0.001,
+    too_close_threshold: float = 1.0,
+    time_penalty_coef: float = 0.0001,
+    silk_coef: float = 0.0,
 ):
     global _next_env_id
 
@@ -175,6 +204,14 @@ def make_vec_env(
             time_scale=time_scale,
             no_fx=no_fx,
             dummy_env=dummy_env,
+            boss_damage_coef=boss_damage_coef,
+            player_damage_coef=player_damage_coef,
+            too_far_coef=too_far_coef,
+            too_far_threshold=too_far_threshold,
+            too_close_coef=too_close_coef,
+            too_close_threshold=too_close_threshold,
+            time_penalty_coef=time_penalty_coef,
+            silk_coef=silk_coef,
         )
         for i in range(n_envs)
     ]
@@ -208,6 +245,14 @@ def train(
     seed: int | None = None,
     dummy_env: bool = False,
     n_envs: int = 1,
+    boss_damage_coef: float = 1.0,
+    player_damage_coef: float = 0.1,
+    too_far_coef: float = 0.001,
+    too_far_threshold: float = 15.0,
+    too_close_coef: float = 0.001,
+    too_close_threshold: float = 1.0,
+    time_penalty_coef: float = 0.0001,
+    silk_coef: float = 0.0,
 ):
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
@@ -275,6 +320,14 @@ def train(
             seed=seed,
             device=str(device),
             dummy_env=dummy_env,
+            boss_damage_coef=boss_damage_coef,
+            player_damage_coef=player_damage_coef,
+            too_far_coef=too_far_coef,
+            too_far_threshold=too_far_threshold,
+            too_close_coef=too_close_coef,
+            too_close_threshold=too_close_threshold,
+            time_penalty_coef=time_penalty_coef,
+            silk_coef=silk_coef,
             created_at=datetime.now().isoformat(),
         )
         print(f"Configuration saved to: {config_path}")
@@ -286,6 +339,14 @@ def train(
         time_scale=time_scale,
         no_fx=no_fx,
         dummy_env=dummy_env,
+        boss_damage_coef=boss_damage_coef,
+        player_damage_coef=player_damage_coef,
+        too_far_coef=too_far_coef,
+        too_far_threshold=too_far_threshold,
+        too_close_coef=too_close_coef,
+        too_close_threshold=too_close_threshold,
+        time_penalty_coef=time_penalty_coef,
+        silk_coef=silk_coef,
     )
 
     # Load VecNormalize if resuming
@@ -554,4 +615,12 @@ if __name__ == "__main__":
             seed=config.get("seed"),
             dummy_env=False,
             n_envs=args.n_envs,
+            boss_damage_coef=config.get("boss_damage_coef", 1.0),
+            player_damage_coef=config.get("player_damage_coef", 0.1),
+            too_far_coef=config.get("too_far_coef", 0.001),
+            too_far_threshold=config.get("too_far_threshold", 15.0),
+            too_close_coef=config.get("too_close_coef", 0.001),
+            too_close_threshold=config.get("too_close_threshold", 1.0),
+            time_penalty_coef=config.get("time_penalty_coef", 0.0001),
+            silk_coef=config.get("silk_coef", 0.0),
         )

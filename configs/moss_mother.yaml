@@ -1,5 +1,4 @@
 # Hyperparameter configuration for Moss Mother boss fight
-# These are the default training parameters that can be overridden via CLI
 
 # Scenario
 boss: MossMother
@@ -26,3 +25,13 @@ max_grad_norm: 0.3
 features_dim: 256
 pi_layers: [128]
 vf_layers: [128]
+
+# Reward configuration
+boss_damage_coef: 1.0
+player_damage_coef: 0.1
+too_far_coef: 0.001
+too_far_threshold: 15.0
+too_close_coef: 0.001
+too_close_threshold: 1.0
+time_penalty_coef: 0.0001
+silk_coef: 0.0
