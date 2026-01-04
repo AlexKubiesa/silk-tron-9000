@@ -220,7 +220,7 @@ public class DebugOverlayManager : MonoBehaviour
         GUILayout.Label($"Health: {state.bossHealth} / {state.bossMaxHealth}", labelStyle);
         GUILayout.Label($"Phase: {state.bossPhase}", labelStyle);
 
-        var bossAnimState = (BossAnimationState)state.bossAnimationState;
+        var bossAnimState = BossAnimationMapper.GetById(state.bossAnimationState).ClipName;
         GUILayout.Label($"Animation: {bossAnimState}", animStyle);
         GUILayout.Label($"Progress: {state.bossAnimationProgress:P0}", animStyle);
 

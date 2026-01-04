@@ -8,7 +8,7 @@ public static class CommandLineArgs
     public static float TimeScale { get; private set; } = 1.0f;
     public static bool Manual { get; private set; } = false;
     public static bool NoFx { get; private set; } = false;
-    public static Boss Boss { get; private set; } = Boss.Bosses["Lace"];
+    public static Boss Boss { get; private set; } = Boss.GetById(BossId.Lace);
 
     public static void Parse()
     {
@@ -43,7 +43,8 @@ public static class CommandLineArgs
             }
             else if (args[i] == "--boss" && i + 1 < args.Length)
             {
-                if (Boss.Bosses.TryGetValue(args[i + 1], out Boss boss))
+                var boss = Boss.GetByHrid(args[i + 1]);
+                if (boss != null)
                 {
                     Boss = boss;
                     Plugin.Logger.LogInfo($"Set Boss to {boss.Name}");

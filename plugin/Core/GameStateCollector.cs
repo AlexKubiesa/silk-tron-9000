@@ -87,26 +87,26 @@ public static class GameStateCollector
                 var clip = bossAnimator.CurrentClip;
                 if (clip != null && clip.frames != null)
                 {
-                    state.bossAnimationState = (int)BossAnimationMapper.GetAnimationState(clip.name);
+                    state.bossAnimationState = BossAnimationMapper.GetByClipName(clip.name).Id;
                     state.bossAnimationProgress = clip.frames.Length > 0
                         ? (float)bossAnimator.CurrentFrame / clip.frames.Length
                         : 0f;
                 }
                 else
                 {
-                    state.bossAnimationState = (int)BossAnimationState.Unknown;
+                    state.bossAnimationState = BossAnimationMapper.GetUnknownState().Id;
                     state.bossAnimationProgress = 0f;
                 }
             }
             else
             {
-                state.bossAnimationState = (int)BossAnimationState.Unknown;
+                state.bossAnimationState = BossAnimationMapper.GetUnknownState().Id;
                 state.bossAnimationProgress = 0f;
             }
         }
         else
         {
-            state.bossAnimationState = (int)BossAnimationState.Idle;
+            state.bossAnimationState = BossAnimationMapper.GetIdleState().Id;
             state.bossFacingRight = 1;
             state.bossAnimationProgress = 0f;
         }
