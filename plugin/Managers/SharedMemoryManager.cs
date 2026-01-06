@@ -54,6 +54,7 @@ public unsafe struct GameState
     public byte playerFacingRight;
     public byte playerInvincible;
     public byte playerCanAttack;
+    public byte playerCanClawline;
 
     public float bossPosX;
     public float bossPosY;

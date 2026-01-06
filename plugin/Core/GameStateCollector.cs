@@ -33,6 +33,7 @@ public static class GameStateCollector
             state.playerFacingRight = (byte)(player.cState.facingRight ? 1 : 0);
             state.playerInvincible = (byte)(player.playerData.isInvincible ? 1 : 0);
             state.playerCanAttack = (byte)(player.CanAttack() ? 1 : 0);
+            state.playerCanClawline = (byte)(player.CanHarpoonDash() ? 1 : 0);
 
             Vector2 playerPos = new Vector2(player.transform.position.x, player.transform.position.y);
             RaycastSensor.PerformRaycast(playerPos, out float[] distances, out RaycastHitType[] hitTypes);

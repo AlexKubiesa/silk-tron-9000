@@ -209,7 +209,8 @@ public class DebugOverlayManager : MonoBehaviour
             state.playerCanDash == 1 ? "DASH" : null,
             state.playerCanAttack == 1 ? "ATK" : null,
             state.playerInvincible == 1 ? "INV" : null,
-            state.playerFacingRight == 1 ? "RIGHT" : "LEFT"
+            state.playerFacingRight == 1 ? "RIGHT" : "LEFT",
+            state.playerCanClawline == 1 ? "CLW" : null
         }.Where(s => s != null));
         GUILayout.Label($"Flags: {playerFlags}", flagStyle);
         GUILayout.Space(10);

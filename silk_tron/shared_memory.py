@@ -70,6 +70,7 @@ class GameState:
     player_facing_right: bool
     player_invincible: bool
     player_can_attack: bool
+    player_can_clawline: bool
 
     boss_pos_x: float
     boss_pos_y: float
@@ -108,16 +109,14 @@ class SilkSongSharedMemory:
         "ffff"
         + "iiii"
         + "f"
-        + "BBBBB"
-        + "xxx"
+        + "BBBB"
+        + "BBxx"
         + "ffff"
         + "iiii"
         + "f"
-        + "B"
-        + "xxx"
+        + "Bxxx"
         + "f"
-        + "BB"
-        + "xx"
+        + "BBxx"
         + "f" * 32
         + "i" * 32
     )
@@ -254,8 +253,8 @@ class SilkSongSharedMemory:
             self.GAME_STATE_FORMAT, self.shm.buf, offset=self.GAME_STATE_OFFSET  # type: ignore
         )
 
-        raycast_distances = np.array(data[27:59], dtype=np.float32)
-        raycast_hit_types = np.array(data[59:91], dtype=np.float32)
+        raycast_distances = np.array(data[28:60], dtype=np.float32)
+        raycast_hit_types = np.array(data[60:92], dtype=np.float32)
 
         return GameState(
             player_pos_x=data[0],
@@ -272,19 +271,20 @@ class SilkSongSharedMemory:
             player_facing_right=bool(data[11]),
             player_invincible=bool(data[12]),
             player_can_attack=bool(data[13]),
-            boss_pos_x=data[14],
-            boss_pos_y=data[15],
-            boss_vel_x=data[16],
-            boss_vel_y=data[17],
-            boss_health=data[18],
-            boss_max_health=data[19],
-            boss_phase=data[20],
-            boss_animation_state=data[21],
-            boss_animation_progress=data[22],
-            boss_facing_right=bool(data[23]),
-            episode_time=data[24],
-            terminated=bool(data[25]),
-            truncated=bool(data[26]),
+            player_can_clawline=bool(data[14]),
+            boss_pos_x=data[15],
+            boss_pos_y=data[16],
+            boss_vel_x=data[17],
+            boss_vel_y=data[18],
+            boss_health=data[19],
+            boss_max_health=data[20],
+            boss_phase=data[21],
+            boss_animation_state=data[22],
+            boss_animation_progress=data[23],
+            boss_facing_right=bool(data[24]),
+            episode_time=data[25],
+            terminated=bool(data[26]),
+            truncated=bool(data[27]),
             raycast_distances=raycast_distances,
             raycast_hit_types=raycast_hit_types,
         )
