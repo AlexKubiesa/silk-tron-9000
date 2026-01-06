@@ -12,7 +12,7 @@ from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
 import torch
 import torch.nn as nn
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from stable_baselines3.common.vec_env import VecNormalize, VecEnv
 import gymnasium as gym
@@ -201,7 +201,7 @@ def objective(
         activation_fn=nn.ReLU,
     )
 
-    model = PPO(
+    model = MaskablePPO(
         policy="MlpPolicy",
         env=env,
         learning_rate=params["learning_rate"],

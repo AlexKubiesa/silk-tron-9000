@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os
 from typing import Union
 import numpy as np
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 import torch
@@ -369,7 +369,7 @@ def train(
 
     if resuming:
         print(f"\nLoading model from checkpoint: {checkpoint_path}")
-        model = PPO.load(
+        model = MaskablePPO.load(
             checkpoint_path,  # type: ignore
             env=env,
             learning_rate=learning_rate,
@@ -387,8 +387,8 @@ def train(
             device=device,
         )
     else:
-        print("\nInitializing new PPO model...")
-        model = PPO(
+        print("\nInitializing new MaskablePPO model...")
+        model = MaskablePPO(
             policy="MlpPolicy",
             env=env,
             learning_rate=learning_rate,
@@ -496,8 +496,8 @@ def evaluate(
         print("VecNormalize file not found, using default normalization")
         env = VecNormalize(env, norm_obs=False, norm_reward=False, training=False)
 
-    print(f"Loading PPO model from: {model_path}")
-    model = PPO.load(model_path, env=env)
+    print(f"Loading MaskablePPO model from: {model_path}")
+    model = MaskablePPO.load(model_path, env=env)
     print("Model loaded successfully!")
 
     episode_rewards = []
@@ -538,7 +538,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Train a PPO agent on Silksong boss fights"
+        description="Train a MaskablePPO agent on Silksong boss fights"
     )
     parser.add_argument(
         "--config",

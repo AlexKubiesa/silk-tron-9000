@@ -89,6 +89,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             self.shm.restart()  # type: ignore
             game_state = self.shm.reset()  # type: ignore
 
+        self.game_state = game_state
         self.prev_boss_health = game_state.boss_health
         self.prev_player_health = game_state.player_health
         self.prev_player_silk = game_state.player_silk
@@ -122,6 +123,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             print(f"[Env] {e}")
             return self._handle_timeout()
 
+        self.game_state = game_state
         self.total_steps += 1
 
         boss_dmg = self.prev_boss_health - game_state.boss_health
@@ -155,6 +157,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
 
         game_state = self.shm.reset()  # type: ignore
 
+        self.game_state = game_state
         self.prev_boss_health = game_state.boss_health
         self.prev_player_health = game_state.player_health
         self.prev_player_silk = game_state.player_silk
@@ -415,6 +418,33 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         if action[7] != 0:
             self.action_counts["heal"] += 1
 
+    def action_masks(self) -> np.ndarray:
+        """Return action masks for MaskablePPO.
+
+        Returns a 1D boolean array indicating valid actions for MultiDiscrete space.
+        For MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2]), returns array of length 18 (sum of dims).
+        The mask is flattened: [horiz_0, horiz_1, horiz_2, vert_0, vert_1, vert_2, jump_0, jump_1, ...]
+        """
+        # Create flattened mask for MultiDiscrete space
+        mask = np.ones(sum(self.action_space.nvec), dtype=bool)  # type: ignore
+
+        # Movement (horizontal index 0-2 and vertical index 3-5) always allowed
+
+        # Jump: indices 6-7 (no jump=6, jump=7) always allowed, because the player can hold it to jump higher
+
+        # Attack: indices 8-9 (no attack=8, attack=9) always allowed for now
+
+        # Dash: indices 10-11 (no dash=10, dash=11)
+        # Mask "dash=yes" (index 11) if can't dash
+        if not self.game_state.player_can_dash:
+            mask[11] = False  # Can't dash
+
+        # Clawline: indices 12-13 (always allowed for now)
+        # Skill: indices 14-15 (always allowed for now)
+        # Heal: indices 16-17 (always allowed for now)
+
+        return mask
+
     def close(self):
         if hasattr(self, "shm") and self.shm is not None:
             self.shm.close()
@@ -527,3 +557,10 @@ class DummySilksongBossEnv(gym.Env):
         return np.array(
             [player_x, player_y] + [0.0] * 9 + [boss_x, boss_y] + [0.0] * 76
         )
+
+    def action_masks(self) -> np.ndarray:
+        """Return action masks for MaskablePPO. All actions allowed in dummy env.
+
+        Returns a 1D boolean array of length 18 (sum of MultiDiscrete([3,3,2,2,2,2,2,2])).
+        """
+        return np.ones(18, dtype=bool)
