@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
 
+import yaml
 import optuna
 from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
@@ -19,6 +20,13 @@ import gymnasium as gym
 
 from train import make_vec_env, reset_env_id_counter
 from silk_tron.networks import MultiHeadFeatureExtractor
+
+
+def load_config(config_path: str) -> dict:
+    """Load hyperparameters from YAML config file."""
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    return config
 
 
 def get_hyperparameters(trial: optuna.Trial) -> Dict[str, Any]:
@@ -172,6 +180,17 @@ def objective(
     eval_freq: int,
     n_eval_episodes: int,
     time_scale: float,
+    boss_damage_coef: float = 1.0,
+    boss_defeat_coef: float = 0.0,
+    player_damage_coef: float = 0.1,
+    too_far_coef: float = 0.001,
+    too_far_threshold: float = 15.0,
+    too_close_coef: float = 0.001,
+    too_close_threshold: float = 1.0,
+    time_penalty_coef: float = 0.0001,
+    silk_coef: float = 0.0,
+    mask_dash: bool = False,
+    mask_clawline: bool = False,
 ) -> float:
     """Optuna objective function."""
 
@@ -185,10 +204,42 @@ def objective(
         print(f"  {key}: {value}")
     print(f"{'='*60}\n")
 
-    env = make_vec_env(boss=boss, n_envs=n_envs, time_scale=time_scale, no_fx=True)
+    env = make_vec_env(
+        boss=boss,
+        n_envs=n_envs,
+        time_scale=time_scale,
+        no_fx=True,
+        boss_damage_coef=boss_damage_coef,
+        boss_defeat_coef=boss_defeat_coef,
+        player_damage_coef=player_damage_coef,
+        too_far_coef=too_far_coef,
+        too_far_threshold=too_far_threshold,
+        too_close_coef=too_close_coef,
+        too_close_threshold=too_close_threshold,
+        time_penalty_coef=time_penalty_coef,
+        silk_coef=silk_coef,
+        mask_dash=mask_dash,
+        mask_clawline=mask_clawline,
+    )
     env = VecNormalize(env, norm_obs=False, norm_reward=True)
 
-    eval_env = make_vec_env(boss=boss, n_envs=1, time_scale=time_scale, no_fx=True)
+    eval_env = make_vec_env(
+        boss=boss,
+        n_envs=1,
+        time_scale=time_scale,
+        no_fx=True,
+        boss_damage_coef=boss_damage_coef,
+        boss_defeat_coef=boss_defeat_coef,
+        player_damage_coef=player_damage_coef,
+        too_far_coef=too_far_coef,
+        too_far_threshold=too_far_threshold,
+        too_close_coef=too_close_coef,
+        too_close_threshold=too_close_threshold,
+        time_penalty_coef=time_penalty_coef,
+        silk_coef=silk_coef,
+        mask_dash=mask_dash,
+        mask_clawline=mask_clawline,
+    )
     eval_env = VecNormalize(eval_env, norm_obs=False, norm_reward=False, training=False)
 
     policy_kwargs = dict(
@@ -263,6 +314,17 @@ def tune(
     study_name: str = "silksong",
     storage: str | None = None,
     output_dir: str = "./hyperparameters",
+    boss_damage_coef: float = 1.0,
+    boss_defeat_coef: float = 0.0,
+    player_damage_coef: float = 0.1,
+    too_far_coef: float = 0.001,
+    too_far_threshold: float = 15.0,
+    too_close_coef: float = 0.001,
+    too_close_threshold: float = 1.0,
+    time_penalty_coef: float = 0.0001,
+    silk_coef: float = 0.0,
+    mask_dash: bool = True,
+    mask_clawline: bool = True,
 ):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -298,6 +360,17 @@ def tune(
                 eval_freq=eval_freq,
                 n_eval_episodes=n_eval_episodes,
                 time_scale=time_scale,
+                boss_damage_coef=boss_damage_coef,
+                boss_defeat_coef=boss_defeat_coef,
+                player_damage_coef=player_damage_coef,
+                too_far_coef=too_far_coef,
+                too_far_threshold=too_far_threshold,
+                too_close_coef=too_close_coef,
+                too_close_threshold=too_close_threshold,
+                time_penalty_coef=time_penalty_coef,
+                silk_coef=silk_coef,
+                mask_dash=mask_dash,
+                mask_clawline=mask_clawline,
             ),
             n_trials=n_trials,
             show_progress_bar=True,
@@ -347,6 +420,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Hyperparameter tuning for PPO")
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to YAML config file containing hyperparameters (e.g., configs/lace.yaml)",
+    )
     parser.add_argument("--n-trials", type=int, default=20, help="Number of trials")
     parser.add_argument(
         "--n-envs", type=int, default=1, help="Number of parallel environments"
@@ -360,7 +439,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n-eval-episodes", type=int, default=10, help="Episodes per evaluation"
     )
-    parser.add_argument("--time-scale", type=float, default=4.0)
     parser.add_argument("--study-name", type=str, default="silk_tron")
     parser.add_argument(
         "--storage",
@@ -370,25 +448,33 @@ if __name__ == "__main__":
     )
     parser.add_argument("--output_dir", type=str, default="./hyperparameters")
 
-    parser.add_argument(
-        "--boss",
-        type=str,
-        default="Lace",
-        help="Name of the boss to train against",
-        choices=["Lace", "MossMother"],
-    )
-
     args = parser.parse_args()
 
+    # Load config
+    config = load_config(args.config)
+    print(f"Loaded config from: {args.config}")
+    print(f"Config: {json.dumps(config, indent=2)}")
+
     tune(
-        boss=args.boss,
+        boss=config["boss"],
         n_trials=args.n_trials,
         n_envs=args.n_envs,
         timesteps_per_trial=args.timesteps,
         eval_freq=args.eval_freq,
         n_eval_episodes=args.n_eval_episodes,
-        time_scale=args.time_scale,
+        time_scale=config.get("time_scale", 4.0),
         study_name=args.study_name,
         storage=args.storage,
         output_dir=args.output_dir,
+        boss_damage_coef=config.get("boss_damage_coef", 1.0),
+        boss_defeat_coef=config.get("boss_defeat_coef", 0.0),
+        player_damage_coef=config.get("player_damage_coef", 0.1),
+        too_far_coef=config.get("too_far_coef", 0.001),
+        too_far_threshold=config.get("too_far_threshold", 15.0),
+        too_close_coef=config.get("too_close_coef", 0.001),
+        too_close_threshold=config.get("too_close_threshold", 1.0),
+        time_penalty_coef=config.get("time_penalty_coef", 0.0001),
+        silk_coef=config.get("silk_coef", 0.0),
+        mask_dash=config.get("mask_dash", False),
+        mask_clawline=config.get("mask_clawline", False),
     )

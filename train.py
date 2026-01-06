@@ -148,6 +148,8 @@ def make_env(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
+    mask_dash: bool = False,
+    mask_clawline: bool = False,
 ) -> gym.Env:
     import torch
 
@@ -170,6 +172,8 @@ def make_env(
             too_close_threshold=too_close_threshold,
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
+            mask_dash=mask_dash,
+            mask_clawline=mask_clawline,
         )
 
     env = MyMonitor(env)
@@ -191,6 +195,8 @@ def make_vec_env(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
+    mask_dash: bool = False,
+    mask_clawline: bool = False,
 ):
     global _next_env_id
 
@@ -216,6 +222,8 @@ def make_vec_env(
             too_close_threshold=too_close_threshold,
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
+            mask_dash=mask_dash,
+            mask_clawline=mask_clawline,
         )
         for i in range(n_envs)
     ]
@@ -258,6 +266,8 @@ def train(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
+    mask_dash: bool = False,
+    mask_clawline: bool = False,
 ):
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
@@ -334,6 +344,8 @@ def train(
             too_close_threshold=too_close_threshold,
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
+            mask_dash=mask_dash,
+            mask_clawline=mask_clawline,
             created_at=datetime.now().isoformat(),
         )
         print(f"Configuration saved to: {config_path}")
@@ -354,6 +366,8 @@ def train(
         too_close_threshold=too_close_threshold,
         time_penalty_coef=time_penalty_coef,
         silk_coef=silk_coef,
+        mask_dash=mask_dash,
+        mask_clawline=mask_clawline,
     )
 
     # Load VecNormalize if resuming
@@ -631,4 +645,6 @@ if __name__ == "__main__":
             too_close_threshold=config.get("too_close_threshold", 1.0),
             time_penalty_coef=config.get("time_penalty_coef", 0.0001),
             silk_coef=config.get("silk_coef", 0.0),
+            mask_dash=config.get("mask_dash", False),
+            mask_clawline=config.get("mask_clawline", False),
         )

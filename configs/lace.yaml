@@ -9,6 +9,10 @@ time_scale: 4.0
 no_fx: true
 seed: 123  # null means random seed
 
+# Action masking
+mask_dash: false
+mask_clawline: false
+
 # PPO hyperparameters
 learning_rate: 5.0e-4
 n_steps: 2048

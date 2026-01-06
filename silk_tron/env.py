@@ -42,6 +42,8 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         too_close_threshold: float = 1.0,
         time_penalty_coef: float = 0.0001,
         silk_coef: float = 0.0,
+        mask_dash: bool = False,
+        mask_clawline: bool = False,
     ):
         super().__init__()
 
@@ -60,6 +62,8 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.too_close_threshold = too_close_threshold
         self.time_penalty_coef = time_penalty_coef
         self.silk_coef = silk_coef
+        self.mask_dash = mask_dash
+        self.mask_clawline = mask_clawline
 
         self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
         self.observation_space = spaces.Box(
@@ -443,11 +447,13 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         # Attack: indices 8-9 (no attack=8, attack=9) always allowed for now
 
         # Dash: indices 10-11 (no dash=10, dash=11)
-        # Mask "dash=yes" (index 11) if can't dash
-        if not self.game_state.player_can_dash:
+        if self.mask_dash and not self.game_state.player_can_dash:
             mask[11] = False  # Can't dash
 
-        # Clawline: indices 12-13 (always allowed for now)
+        # Clawline: indices 12-13 (no clawline=12, clawline=13)
+        if self.mask_clawline and not self.game_state.player_can_clawline:
+            mask[13] = False  # Can't clawline
+
         # Skill: indices 14-15 (always allowed for now)
         # Heal: indices 16-17 (always allowed for now)
 
