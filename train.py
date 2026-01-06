@@ -497,13 +497,43 @@ def evaluate(
     n_episodes: int = 10,
     time_scale: float = 1.0,
     no_fx: bool = False,
+    boss_damage_coef: float = 1.0,
+    boss_defeat_coef: float = 0.0,
+    player_damage_coef: float = 0.1,
+    too_far_coef: float = 0.001,
+    too_far_threshold: float = 15.0,
+    too_close_coef: float = 0.001,
+    too_close_threshold: float = 1.0,
+    time_penalty_coef: float = 0.0001,
+    silk_coef: float = 0.0,
+    mask_dash: bool = False,
+    mask_clawline: bool = False,
 ):
     print(f"\nEvaluating model: {model_path}")
     print(f"Time scale: {time_scale}")
     print(f"NoFx: {no_fx}")
 
     env = DummyVecEnv(
-        [partial(make_env, boss=boss, env_id=1, time_scale=time_scale, no_fx=no_fx)]
+        [
+            partial(
+                make_env,
+                boss=boss,
+                env_id=1,
+                time_scale=time_scale,
+                no_fx=no_fx,
+                boss_damage_coef=boss_damage_coef,
+                boss_defeat_coef=boss_defeat_coef,
+                player_damage_coef=player_damage_coef,
+                too_far_coef=too_far_coef,
+                too_far_threshold=too_far_threshold,
+                too_close_coef=too_close_coef,
+                too_close_threshold=too_close_threshold,
+                time_penalty_coef=time_penalty_coef,
+                silk_coef=silk_coef,
+                mask_dash=mask_dash,
+                mask_clawline=mask_clawline,
+            )
+        ]
     )
 
     # Find corresponding VecNormalize file
@@ -606,6 +636,17 @@ if __name__ == "__main__":
             n_episodes=10,
             time_scale=1.0,
             no_fx=False,
+            boss_damage_coef=config.get("boss_damage_coef", 1.0),
+            boss_defeat_coef=config.get("boss_defeat_coef", 0.0),
+            player_damage_coef=config.get("player_damage_coef", 0.1),
+            too_far_coef=config.get("too_far_coef", 0.001),
+            too_far_threshold=config.get("too_far_threshold", 15.0),
+            too_close_coef=config.get("too_close_coef", 0.001),
+            too_close_threshold=config.get("too_close_threshold", 1.0),
+            time_penalty_coef=config.get("time_penalty_coef", 0.0001),
+            silk_coef=config.get("silk_coef", 0.0),
+            mask_dash=config.get("mask_dash", False),
+            mask_clawline=config.get("mask_clawline", False),
         )
     else:
         # Extract network architecture params
