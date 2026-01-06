@@ -604,7 +604,7 @@ if __name__ == "__main__":
             args.checkpoint,
             config["boss"],
             n_episodes=10,
-            time_scale=config.get("time_scale", 1.0),
+            time_scale=1.0,
             no_fx=False,
         )
     else:
