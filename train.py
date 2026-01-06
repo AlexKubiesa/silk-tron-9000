@@ -140,6 +140,7 @@ def make_env(
     no_fx: bool = False,
     dummy_env: bool = False,
     boss_damage_coef: float = 1.0,
+    boss_defeat_coef: float = 0.0,
     player_damage_coef: float = 0.1,
     too_far_coef: float = 0.001,
     too_far_threshold: float = 15.0,
@@ -161,6 +162,7 @@ def make_env(
             time_scale=time_scale,
             no_fx=no_fx,
             boss_damage_coef=boss_damage_coef,
+            boss_defeat_coef=boss_defeat_coef,
             player_damage_coef=player_damage_coef,
             too_far_coef=too_far_coef,
             too_far_threshold=too_far_threshold,
@@ -181,6 +183,7 @@ def make_vec_env(
     no_fx: bool = False,
     dummy_env: bool = False,
     boss_damage_coef: float = 1.0,
+    boss_defeat_coef: float = 0.0,
     player_damage_coef: float = 0.1,
     too_far_coef: float = 0.001,
     too_far_threshold: float = 15.0,
@@ -205,6 +208,7 @@ def make_vec_env(
             no_fx=no_fx,
             dummy_env=dummy_env,
             boss_damage_coef=boss_damage_coef,
+            boss_defeat_coef=boss_defeat_coef,
             player_damage_coef=player_damage_coef,
             too_far_coef=too_far_coef,
             too_far_threshold=too_far_threshold,
@@ -246,6 +250,7 @@ def train(
     dummy_env: bool = False,
     n_envs: int = 1,
     boss_damage_coef: float = 1.0,
+    boss_defeat_coef: float = 0.0,
     player_damage_coef: float = 0.1,
     too_far_coef: float = 0.001,
     too_far_threshold: float = 15.0,
@@ -321,6 +326,7 @@ def train(
             device=str(device),
             dummy_env=dummy_env,
             boss_damage_coef=boss_damage_coef,
+            boss_defeat_coef=boss_defeat_coef,
             player_damage_coef=player_damage_coef,
             too_far_coef=too_far_coef,
             too_far_threshold=too_far_threshold,
@@ -340,6 +346,7 @@ def train(
         no_fx=no_fx,
         dummy_env=dummy_env,
         boss_damage_coef=boss_damage_coef,
+        boss_defeat_coef=boss_defeat_coef,
         player_damage_coef=player_damage_coef,
         too_far_coef=too_far_coef,
         too_far_threshold=too_far_threshold,
@@ -572,7 +579,7 @@ if __name__ == "__main__":
     config = load_config(args.config)
     print(f"Loaded config from: {args.config}")
     print(f"Config: {json.dumps(config, indent=2)}")
-    
+
     # Extract config name from path (e.g., "configs/lace.yaml" -> "lace")
     config_name = Path(args.config).stem
 
@@ -616,6 +623,7 @@ if __name__ == "__main__":
             dummy_env=False,
             n_envs=args.n_envs,
             boss_damage_coef=config.get("boss_damage_coef", 1.0),
+            boss_defeat_coef=config.get("boss_defeat_coef", 0.0),
             player_damage_coef=config.get("player_damage_coef", 0.1),
             too_far_coef=config.get("too_far_coef", 0.001),
             too_far_threshold=config.get("too_far_threshold", 15.0),

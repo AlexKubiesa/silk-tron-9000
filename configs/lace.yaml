@@ -28,6 +28,7 @@ vf_layers: [128]
 
 # Reward configuration
 boss_damage_coef: 1.0
+boss_defeat_coef: 0.0
 player_damage_coef: 0.1
 too_far_coef: 0.001
 too_far_threshold: 15.0

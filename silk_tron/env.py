@@ -34,6 +34,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         time_scale: float = 1.0,
         no_fx: bool = False,
         boss_damage_coef: float = 1.0,
+        boss_defeat_coef: float = 0.0,
         player_damage_coef: float = 0.1,
         too_far_coef: float = 0.001,
         too_far_threshold: float = 15.0,
@@ -51,6 +52,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
 
         # Reward coefficients and thresholds
         self.boss_damage_coef = boss_damage_coef
+        self.boss_defeat_coef = boss_defeat_coef
         self.player_damage_coef = player_damage_coef
         self.too_far_coef = too_far_coef
         self.too_far_threshold = too_far_threshold
@@ -178,6 +180,12 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         components["boss_damage"] = (
             boss_dmg / self.boss.max_hp
         ) * self.boss_damage_coef
+
+        components["boss_defeat"] = (
+            self.boss_defeat_coef
+            if (self.prev_boss_health > 0 and game_state.boss_health <= 0)
+            else 0.0
+        )
 
         player_dmg = self.prev_player_health - game_state.player_health
         components["player_damage"] = (
