@@ -41,20 +41,18 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def create_run_directory(
-    base_dir: str, run_name: str | None = None, config_name: str | None = None
-) -> tuple[str, str, str]:
+def create_run_directory(base_dir: str, name: str) -> tuple[str, str, str]:
     """Create a run directory with timestamp.
+
+    Args:
+        base_dir: Base directory for experiments
+        name: Name prefix for the run directory
 
     Returns:
         Tuple of (run_dir, checkpoints_dir, logs_dir)
     """
-    if run_name:
-        dir_name = run_name
-    else:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        prefix = config_name if config_name else "run"
-        dir_name = f"{prefix}_{timestamp}"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    dir_name = f"{name}_{timestamp}"
 
     run_dir = os.path.join(base_dir, dir_name)
     checkpoints_dir = os.path.join(run_dir, "checkpoints")
@@ -249,7 +247,6 @@ def train(
     max_grad_norm: float = 0.3,
     experiments_dir: str = "./experiments",
     run_name: str | None = None,
-    config_name: str | None = None,
     checkpoint_path: str | None = None,
     time_scale: float = 4.0,
     device: Union[torch.device, str] = "cpu",
@@ -292,8 +289,9 @@ def train(
         log_dir = os.path.join(run_dir, "logs")
     else:
         # Create new run directory
+        assert run_name is not None
         run_dir, checkpoints_dir, log_dir = create_run_directory(
-            experiments_dir, run_name, config_name
+            experiments_dir, run_name
         )
 
     if resuming:
@@ -627,6 +625,9 @@ if __name__ == "__main__":
     # Extract config name from path (e.g., "configs/lace.yaml" -> "lace")
     config_name = Path(args.config).stem
 
+    # Use run_name if provided, otherwise fall back to config_name
+    run_name = args.run_name if args.run_name else config_name
+
     if args.eval:
         if not args.checkpoint:
             parser.error("--eval requires --checkpoint")
@@ -668,8 +669,7 @@ if __name__ == "__main__":
             vf_coef=config.get("vf_coef", 0.5),
             max_grad_norm=config.get("max_grad_norm", 0.3),
             experiments_dir=args.experiments_dir,
-            run_name=args.run_name,
-            config_name=config_name,
+            run_name=run_name,
             checkpoint_path=args.checkpoint,
             time_scale=config.get("time_scale", 4.0),
             device="cpu",
