@@ -6,6 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 from stable_baselines3.common.monitor import Monitor
 from silk_tron.bosses import BOSSES
+from silk_tron.handicaps import HandicapConfig
 from silk_tron.constants import (
     BOSS_MAX_PHASE,
     HERO_VEL_X_RANGE,
@@ -43,9 +44,12 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         time_penalty_coef: float = 0.0001,
         silk_coef: float = 0.0,
         mask_dash: bool = False,
-        mask_clawline: bool = False,
+        handicaps: HandicapConfig | None = None,
     ):
         super().__init__()
+
+        if handicaps is None:
+            handicaps = HandicapConfig()
 
         self.boss = BOSSES[boss]
         self.arena_width = self.boss.arena_max_x - self.boss.arena_min_x
@@ -63,7 +67,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.time_penalty_coef = time_penalty_coef
         self.silk_coef = silk_coef
         self.mask_dash = mask_dash
-        self.mask_clawline = mask_clawline
+        self.handicaps = handicaps
 
         self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
         self.observation_space = spaces.Box(
@@ -83,7 +87,13 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             "heal",
         ]
 
-        self.shm = SilkSongSharedMemory(boss, id, time_scale=time_scale, no_fx=no_fx)
+        self.shm = SilkSongSharedMemory(
+            boss,
+            id,
+            time_scale=time_scale,
+            no_fx=no_fx,
+            player_has_clawline=handicaps.has_clawline,
+        )
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -451,8 +461,8 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             mask[11] = False  # Can't dash
 
         # Clawline: indices 12-13 (no clawline=12, clawline=13)
-        if self.mask_clawline and not self.game_state.player_can_clawline:
-            mask[13] = False  # Can't clawline
+        if not self.handicaps.has_clawline:
+            mask[13] = False  # Clawline disabled by handicap
 
         # Skill: indices 14-15 (always allowed for now)
         # Heal: indices 16-17 (always allowed for now)

@@ -70,19 +70,19 @@ public class Plugin : BaseUnityPlugin
         Logger.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} is loaded!");
     }
 
+    private void ParseCommandLineArgs()
+    {
+        CommandLineArgs.Parse();
+        InstanceId = CommandLineArgs.Id;
+        ActionManager.IsAgentControlEnabled = !CommandLineArgs.Manual;
+    }
+
     private void Start()
     {
         if (GameManager.instance != null && GameManager.instance.gameSettings != null)
         {
             GameManager.instance.gameSettings.particleEffectsLevel = 0;
         }
-    }
-
-    private void ParseCommandLineArgs()
-    {
-        CommandLineArgs.Parse();
-        InstanceId = CommandLineArgs.Id;
-        ActionManager.IsAgentControlEnabled = !CommandLineArgs.Manual;
     }
 
     private void Update()

@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from functools import partial
 from pathlib import Path
 from dotenv import load_dotenv
@@ -17,11 +18,13 @@ import yaml
 
 
 from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
+from silk_tron.handicaps import HandicapConfig
 from silk_tron.networks import (
     MultiHeadFeatureExtractor,
     TensorboardCallback,
     CustomCheckpointCallback,
 )
+
 
 _next_env_id = 1
 
@@ -66,6 +69,11 @@ def create_run_directory(base_dir: str, name: str) -> tuple[str, str, str]:
 
 def save_config(config_path: str, **kwargs):
     """Save training configuration to JSON file."""
+    # Convert dataclass instances to dicts for JSON serialization
+    for key, value in kwargs.items():
+        if isinstance(value, HandicapConfig):
+            kwargs[key] = asdict(value)
+
     with open(config_path, "w") as f:
         json.dump(kwargs, f, indent=2)
 
@@ -147,11 +155,14 @@ def make_env(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     mask_dash: bool = False,
-    mask_clawline: bool = False,
+    handicaps: HandicapConfig | None = None,
 ) -> gym.Env:
     import torch
 
     torch.set_num_threads(1)
+
+    if handicaps is None:
+        handicaps = HandicapConfig()
 
     if dummy_env:
         env = DummySilksongBossEnv()
@@ -171,7 +182,7 @@ def make_env(
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
             mask_dash=mask_dash,
-            mask_clawline=mask_clawline,
+            handicaps=handicaps,
         )
 
     env = MyMonitor(env)
@@ -194,9 +205,12 @@ def make_vec_env(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     mask_dash: bool = False,
-    mask_clawline: bool = False,
+    handicaps: HandicapConfig | None = None,
 ):
     global _next_env_id
+
+    if handicaps is None:
+        handicaps = HandicapConfig()
 
     if n_envs < 1:
         raise ValueError(f"n_envs must be >= 1, got {n_envs}")
@@ -221,7 +235,7 @@ def make_vec_env(
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
             mask_dash=mask_dash,
-            mask_clawline=mask_clawline,
+            handicaps=handicaps,
         )
         for i in range(n_envs)
     ]
@@ -264,9 +278,13 @@ def train(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     mask_dash: bool = False,
-    mask_clawline: bool = False,
+    handicaps: HandicapConfig | None = None,
 ):
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
+
+    # Set default handicaps if not provided
+    if handicaps is None:
+        handicaps = HandicapConfig()
 
     # Set random seeds for reproducibility
     if resuming:
@@ -343,7 +361,7 @@ def train(
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
             mask_dash=mask_dash,
-            mask_clawline=mask_clawline,
+            handicaps=handicaps,
             created_at=datetime.now().isoformat(),
         )
         print(f"Configuration saved to: {config_path}")
@@ -365,7 +383,7 @@ def train(
         time_penalty_coef=time_penalty_coef,
         silk_coef=silk_coef,
         mask_dash=mask_dash,
-        mask_clawline=mask_clawline,
+        handicaps=handicaps,
     )
 
     # Load VecNormalize if resuming
@@ -505,8 +523,11 @@ def evaluate(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     mask_dash: bool = False,
-    mask_clawline: bool = False,
+    handicaps: HandicapConfig | None = None,
 ):
+    if handicaps is None:
+        handicaps = HandicapConfig()
+
     print(f"\nEvaluating model: {model_path}")
     print(f"Time scale: {time_scale}")
     print(f"NoFx: {no_fx}")
@@ -529,7 +550,7 @@ def evaluate(
                 time_penalty_coef=time_penalty_coef,
                 silk_coef=silk_coef,
                 mask_dash=mask_dash,
-                mask_clawline=mask_clawline,
+                handicaps=handicaps,
             )
         ]
     )
@@ -628,9 +649,14 @@ if __name__ == "__main__":
     # Use run_name if provided, otherwise fall back to config_name
     run_name = args.run_name if args.run_name else config_name
 
+    # Load handicaps from config
+    handicaps_dict = config.get("handicaps", {})
+    handicaps = HandicapConfig(**handicaps_dict)
+
     if args.eval:
         if not args.checkpoint:
             parser.error("--eval requires --checkpoint")
+
         evaluate(
             args.checkpoint,
             config["boss"],
@@ -647,7 +673,7 @@ if __name__ == "__main__":
             time_penalty_coef=config.get("time_penalty_coef", 0.0001),
             silk_coef=config.get("silk_coef", 0.0),
             mask_dash=config.get("mask_dash", False),
-            mask_clawline=config.get("mask_clawline", False),
+            handicaps=handicaps,
         )
     else:
         # Extract network architecture params
@@ -687,5 +713,5 @@ if __name__ == "__main__":
             time_penalty_coef=config.get("time_penalty_coef", 0.0001),
             silk_coef=config.get("silk_coef", 0.0),
             mask_dash=config.get("mask_dash", False),
-            mask_clawline=config.get("mask_clawline", False),
+            handicaps=handicaps,
         )

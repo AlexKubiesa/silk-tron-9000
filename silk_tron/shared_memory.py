@@ -219,12 +219,14 @@ class SilkSongSharedMemory:
         id: int,
         time_scale: float = 1.0,
         no_fx: bool = False,
+        player_has_clawline: bool = True,
         timeout_ms: int | None = None,
     ):
         self.boss = boss
         self.id = id
         self.time_scale = time_scale
         self.no_fx = no_fx
+        self.player_has_clawline = player_has_clawline
         self.process = None
         self.timeout_ms = (
             timeout_ms if timeout_ms is not None else self.DEFAULT_TIMEOUT_MS
@@ -398,6 +400,7 @@ class SilkSongSharedMemory:
         ]
         if self.no_fx:
             args.append("--no-fx")
+        args.extend(["--player-has-clawline", "true" if self.player_has_clawline else "false"])
 
         print(f"Launching game from: {game_path}")
 

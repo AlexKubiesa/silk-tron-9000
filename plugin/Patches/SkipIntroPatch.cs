@@ -31,7 +31,7 @@ internal static class SkipIntroPatch
         UIManager.instance.UIContinueGame(1);
     }
 
-    private static IEnumerator WaitForSceneReady()
+    private static IEnumerator PrepareGame()
     {
         var consecutiveBenchFrames = 0;
         while (true)
@@ -80,6 +80,8 @@ internal static class SkipIntroPatch
             yield return new WaitForEndOfFrame();
         }
 
+        HandicapManager.ApplyHandicaps();
+
         SharedMemoryManager.Instance.WriteState(StateType.Ready);
     }
 
@@ -91,7 +93,7 @@ internal static class SkipIntroPatch
             var scene = SceneManager.GetActiveScene();
             if (scene.name != Constants.MenuTitleScene && scene.name != CommandLineArgs.Boss.Scene)
             {
-                GameManager.instance.StartCoroutine(WaitForSceneReady());
+                GameManager.instance.StartCoroutine(PrepareGame());
             }
         }
     }

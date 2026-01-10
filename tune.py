@@ -20,6 +20,7 @@ import gymnasium as gym
 
 from train import make_vec_env, reset_env_id_counter
 from silk_tron.networks import MultiHeadFeatureExtractor
+from silk_tron.handicaps import HandicapConfig
 
 
 def load_config(config_path: str) -> dict:
@@ -190,9 +191,12 @@ def objective(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     mask_dash: bool = False,
-    mask_clawline: bool = False,
+    handicaps: HandicapConfig | None = None,
 ) -> float:
     """Optuna objective function."""
+
+    if handicaps is None:
+        handicaps = HandicapConfig()
 
     reset_env_id_counter()
     params = get_hyperparameters(trial)
@@ -219,7 +223,7 @@ def objective(
         time_penalty_coef=time_penalty_coef,
         silk_coef=silk_coef,
         mask_dash=mask_dash,
-        mask_clawline=mask_clawline,
+        handicaps=handicaps,
     )
     env = VecNormalize(env, norm_obs=False, norm_reward=True)
 
@@ -238,7 +242,7 @@ def objective(
         time_penalty_coef=time_penalty_coef,
         silk_coef=silk_coef,
         mask_dash=mask_dash,
-        mask_clawline=mask_clawline,
+        handicaps=handicaps,
     )
     eval_env = VecNormalize(eval_env, norm_obs=False, norm_reward=False, training=False)
 
@@ -324,8 +328,11 @@ def tune(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     mask_dash: bool = True,
-    mask_clawline: bool = True,
+    handicaps: HandicapConfig | None = None,
 ):
+    if handicaps is None:
+        handicaps = HandicapConfig()
+
     os.makedirs(output_dir, exist_ok=True)
 
     sampler = TPESampler(n_startup_trials=5, seed=42)
@@ -370,7 +377,7 @@ def tune(
                 time_penalty_coef=time_penalty_coef,
                 silk_coef=silk_coef,
                 mask_dash=mask_dash,
-                mask_clawline=mask_clawline,
+                handicaps=handicaps,
             ),
             n_trials=n_trials,
             show_progress_bar=True,
@@ -455,6 +462,10 @@ if __name__ == "__main__":
     print(f"Loaded config from: {args.config}")
     print(f"Config: {json.dumps(config, indent=2)}")
 
+    # Load handicaps from config
+    handicaps_dict = config.get("handicaps", {})
+    handicaps = HandicapConfig(**handicaps_dict)
+
     tune(
         boss=config["boss"],
         n_trials=args.n_trials,
@@ -476,5 +487,5 @@ if __name__ == "__main__":
         time_penalty_coef=config.get("time_penalty_coef", 0.0001),
         silk_coef=config.get("silk_coef", 0.0),
         mask_dash=config.get("mask_dash", False),
-        mask_clawline=config.get("mask_clawline", False),
+        handicaps=handicaps,
     )

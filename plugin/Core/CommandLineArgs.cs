@@ -8,6 +8,7 @@ public static class CommandLineArgs
     public static float TimeScale { get; private set; } = 1.0f;
     public static bool Manual { get; private set; } = false;
     public static bool NoFx { get; private set; } = false;
+    public static bool PlayerHasClawline { get; private set; } = true;
     public static Boss Boss { get; private set; } = Boss.GetById(BossId.Lace);
 
     public static void Parse()
@@ -40,6 +41,14 @@ public static class CommandLineArgs
             {
                 NoFx = true;
                 Plugin.Logger.LogInfo("Set NoFx mode to true");
+            }
+            else if (args[i] == "--player-has-clawline" && i + 1 < args.Length)
+            {
+                if (bool.TryParse(args[i + 1], out bool hasClawline))
+                {
+                    PlayerHasClawline = hasClawline;
+                    Plugin.Logger.LogInfo($"Set PlayerHasClawline to {PlayerHasClawline}");
+                }
             }
             else if (args[i] == "--boss" && i + 1 < args.Length)
             {
