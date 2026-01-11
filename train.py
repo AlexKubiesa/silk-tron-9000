@@ -563,6 +563,7 @@ def evaluate(
 
     episode_rewards = []
     episode_lengths = []
+    episode_wins = []
 
     for episode in range(n_episodes):
         obs = env.reset()
@@ -576,13 +577,20 @@ def evaluate(
             episode_reward += reward[0]
             episode_length += 1
 
+        # Track win status from info
+        episode_success = info[0].get("success", False)
+        episode_wins.append(episode_success)
+        
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
+        win_status = "WIN" if episode_success else "LOSS"
         print(
-            f"Episode {episode + 1}/{n_episodes}: Reward = {episode_reward:.2f}, Length = {episode_length}"
+            f"Episode {episode + 1}/{n_episodes}: Reward = {episode_reward:.2f}, Length = {episode_length}, Result = {win_status}"
         )
 
     env.close()
+
+    win_rate = np.mean(episode_wins) * 100
 
     print("\n" + "=" * 60)
     print("Evaluation Results:")
@@ -592,6 +600,7 @@ def evaluate(
     print(
         f"Mean length: {np.mean(episode_lengths):.2f} +/- {np.std(episode_lengths):.2f}"
     )
+    print(f"Win rate: {win_rate:.1f}% ({sum(episode_wins)}/{n_episodes})")
     print("=" * 60)
 
 
