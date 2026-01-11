@@ -43,7 +43,6 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         too_close_threshold: float = 1.0,
         time_penalty_coef: float = 0.0001,
         silk_coef: float = 0.0,
-        mask_dash: bool = False,
         handicaps: HandicapConfig | None = None,
     ):
         super().__init__()
@@ -66,7 +65,6 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.too_close_threshold = too_close_threshold
         self.time_penalty_coef = time_penalty_coef
         self.silk_coef = silk_coef
-        self.mask_dash = mask_dash
         self.handicaps = handicaps
 
         self.action_space = spaces.MultiDiscrete([3, 3, 2, 2, 2, 2, 2, 2])
@@ -93,6 +91,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             time_scale=time_scale,
             no_fx=no_fx,
             player_has_clawline=handicaps.has_clawline,
+            player_has_dash=handicaps.has_dash,
         )
 
     def reset(self, seed=None, options=None):
@@ -457,8 +456,8 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         # Attack: indices 8-9 (no attack=8, attack=9) always allowed for now
 
         # Dash: indices 10-11 (no dash=10, dash=11)
-        if self.mask_dash and not self.game_state.player_can_dash:
-            mask[11] = False  # Can't dash
+        if not self.handicaps.has_dash:
+            mask[11] = False  # Dash disabled by handicap
 
         # Clawline: indices 12-13 (no clawline=12, clawline=13)
         if not self.handicaps.has_clawline:

@@ -9,6 +9,7 @@ public static class CommandLineArgs
     public static bool Manual { get; private set; } = false;
     public static bool NoFx { get; private set; } = false;
     public static bool PlayerHasClawline { get; private set; } = true;
+    public static bool PlayerHasDash { get; private set; } = true;
     public static Boss Boss { get; private set; } = Boss.GetById(BossId.Lace);
 
     public static void Parse()
@@ -48,6 +49,14 @@ public static class CommandLineArgs
                 {
                     PlayerHasClawline = hasClawline;
                     Plugin.Logger.LogInfo($"Set PlayerHasClawline to {PlayerHasClawline}");
+                }
+            }
+            else if (args[i] == "--player-has-dash" && i + 1 < args.Length)
+            {
+                if (bool.TryParse(args[i + 1], out bool hasDash))
+                {
+                    PlayerHasDash = hasDash;
+                    Plugin.Logger.LogInfo($"Set PlayerHasDash to {PlayerHasDash}");
                 }
             }
             else if (args[i] == "--boss" && i + 1 < args.Length)

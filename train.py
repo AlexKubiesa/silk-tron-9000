@@ -154,7 +154,6 @@ def make_env(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
-    mask_dash: bool = False,
     handicaps: HandicapConfig | None = None,
 ) -> gym.Env:
     import torch
@@ -181,7 +180,6 @@ def make_env(
             too_close_threshold=too_close_threshold,
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
-            mask_dash=mask_dash,
             handicaps=handicaps,
         )
 
@@ -204,7 +202,6 @@ def make_vec_env(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
-    mask_dash: bool = False,
     handicaps: HandicapConfig | None = None,
 ):
     global _next_env_id
@@ -234,7 +231,6 @@ def make_vec_env(
             too_close_threshold=too_close_threshold,
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
-            mask_dash=mask_dash,
             handicaps=handicaps,
         )
         for i in range(n_envs)
@@ -277,7 +273,6 @@ def train(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
-    mask_dash: bool = False,
     handicaps: HandicapConfig | None = None,
 ):
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
@@ -360,7 +355,6 @@ def train(
             too_close_threshold=too_close_threshold,
             time_penalty_coef=time_penalty_coef,
             silk_coef=silk_coef,
-            mask_dash=mask_dash,
             handicaps=handicaps,
             created_at=datetime.now().isoformat(),
         )
@@ -382,7 +376,6 @@ def train(
         too_close_threshold=too_close_threshold,
         time_penalty_coef=time_penalty_coef,
         silk_coef=silk_coef,
-        mask_dash=mask_dash,
         handicaps=handicaps,
     )
 
@@ -522,7 +515,6 @@ def evaluate(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
-    mask_dash: bool = False,
     handicaps: HandicapConfig | None = None,
 ):
     if handicaps is None:
@@ -549,7 +541,6 @@ def evaluate(
                 too_close_threshold=too_close_threshold,
                 time_penalty_coef=time_penalty_coef,
                 silk_coef=silk_coef,
-                mask_dash=mask_dash,
                 handicaps=handicaps,
             )
         ]
@@ -672,7 +663,6 @@ if __name__ == "__main__":
             too_close_threshold=config.get("too_close_threshold", 1.0),
             time_penalty_coef=config.get("time_penalty_coef", 0.0001),
             silk_coef=config.get("silk_coef", 0.0),
-            mask_dash=config.get("mask_dash", False),
             handicaps=handicaps,
         )
     else:
@@ -712,6 +702,5 @@ if __name__ == "__main__":
             too_close_threshold=config.get("too_close_threshold", 1.0),
             time_penalty_coef=config.get("time_penalty_coef", 0.0001),
             silk_coef=config.get("silk_coef", 0.0),
-            mask_dash=config.get("mask_dash", False),
             handicaps=handicaps,
         )

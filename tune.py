@@ -190,7 +190,6 @@ def objective(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
-    mask_dash: bool = False,
     handicaps: HandicapConfig | None = None,
 ) -> float:
     """Optuna objective function."""
@@ -222,7 +221,6 @@ def objective(
         too_close_threshold=too_close_threshold,
         time_penalty_coef=time_penalty_coef,
         silk_coef=silk_coef,
-        mask_dash=mask_dash,
         handicaps=handicaps,
     )
     env = VecNormalize(env, norm_obs=False, norm_reward=True)
@@ -241,7 +239,6 @@ def objective(
         too_close_threshold=too_close_threshold,
         time_penalty_coef=time_penalty_coef,
         silk_coef=silk_coef,
-        mask_dash=mask_dash,
         handicaps=handicaps,
     )
     eval_env = VecNormalize(eval_env, norm_obs=False, norm_reward=False, training=False)
@@ -327,7 +324,6 @@ def tune(
     too_close_threshold: float = 1.0,
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
-    mask_dash: bool = True,
     handicaps: HandicapConfig | None = None,
 ):
     if handicaps is None:
@@ -376,7 +372,6 @@ def tune(
                 too_close_threshold=too_close_threshold,
                 time_penalty_coef=time_penalty_coef,
                 silk_coef=silk_coef,
-                mask_dash=mask_dash,
                 handicaps=handicaps,
             ),
             n_trials=n_trials,
@@ -486,6 +481,5 @@ if __name__ == "__main__":
         too_close_threshold=config.get("too_close_threshold", 1.0),
         time_penalty_coef=config.get("time_penalty_coef", 0.0001),
         silk_coef=config.get("silk_coef", 0.0),
-        mask_dash=config.get("mask_dash", False),
         handicaps=handicaps,
     )
