@@ -13,6 +13,7 @@ seed: 123  # null means random seed
 handicaps:
   has_clawline: false
   has_dash: false
+  has_silkspear: false
 
 # PPO hyperparameters
 learning_rate: 0.0009654400943128438

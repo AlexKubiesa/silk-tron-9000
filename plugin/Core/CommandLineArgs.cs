@@ -10,6 +10,7 @@ public static class CommandLineArgs
     public static bool NoFx { get; private set; } = false;
     public static bool PlayerHasClawline { get; private set; } = true;
     public static bool PlayerHasDash { get; private set; } = true;
+    public static bool PlayerHasSilkspear { get; private set; } = true;
     public static Boss Boss { get; private set; } = Boss.GetById(BossId.Lace);
 
     public static void Parse()
@@ -57,6 +58,14 @@ public static class CommandLineArgs
                 {
                     PlayerHasDash = hasDash;
                     Plugin.Logger.LogInfo($"Set PlayerHasDash to {PlayerHasDash}");
+                }
+            }
+            else if (args[i] == "--player-has-silkspear" && i + 1 < args.Length)
+            {
+                if (bool.TryParse(args[i + 1], out bool hasSilkspear))
+                {
+                    PlayerHasSilkspear = hasSilkspear;
+                    Plugin.Logger.LogInfo($"Set PlayerHasSilkspear to {PlayerHasSilkspear}");
                 }
             }
             else if (args[i] == "--boss" && i + 1 < args.Length)

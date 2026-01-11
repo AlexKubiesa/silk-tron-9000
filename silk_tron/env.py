@@ -92,6 +92,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             no_fx=no_fx,
             player_has_clawline=handicaps.has_clawline,
             player_has_dash=handicaps.has_dash,
+            player_has_silkspear=handicaps.has_silkspear,
         )
 
     def reset(self, seed=None, options=None):
@@ -463,7 +464,10 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         if not self.handicaps.has_clawline:
             mask[13] = False  # Clawline disabled by handicap
 
-        # Skill: indices 14-15 (always allowed for now)
+        # Skill: indices 14-15 (no skill=14, skill=15)
+        if not self.handicaps.has_silkspear:
+            mask[15] = False  # Silkspear disabled by handicap
+
         # Heal: indices 16-17 (always allowed for now)
 
         return mask
