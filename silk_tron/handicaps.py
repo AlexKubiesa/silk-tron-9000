@@ -9,4 +9,5 @@ class HandicapConfig:
 
     has_clawline: bool = True
     has_dash: bool = True
+    has_double_jump: bool = True
     has_silkspear: bool = True

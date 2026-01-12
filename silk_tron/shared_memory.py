@@ -221,6 +221,7 @@ class SilkSongSharedMemory:
         no_fx: bool = False,
         player_has_clawline: bool = True,
         player_has_dash: bool = True,
+        player_has_double_jump: bool = True,
         player_has_silkspear: bool = True,
         timeout_ms: int | None = None,
     ):
@@ -230,6 +231,7 @@ class SilkSongSharedMemory:
         self.no_fx = no_fx
         self.player_has_clawline = player_has_clawline
         self.player_has_dash = player_has_dash
+        self.player_has_double_jump = player_has_double_jump
         self.player_has_silkspear = player_has_silkspear
         self.process = None
         self.timeout_ms = (
@@ -404,9 +406,19 @@ class SilkSongSharedMemory:
         ]
         if self.no_fx:
             args.append("--no-fx")
-        args.extend(["--player-has-clawline", "true" if self.player_has_clawline else "false"])
+        args.extend(
+            ["--player-has-clawline", "true" if self.player_has_clawline else "false"]
+        )
         args.extend(["--player-has-dash", "true" if self.player_has_dash else "false"])
-        args.extend(["--player-has-silkspear", "true" if self.player_has_silkspear else "false"])
+        args.extend(
+            [
+                "--player-has-double-jump",
+                "true" if self.player_has_double_jump else "false",
+            ]
+        )
+        args.extend(
+            ["--player-has-silkspear", "true" if self.player_has_silkspear else "false"]
+        )
 
         print(f"Launching game from: {game_path}")
 

@@ -92,6 +92,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             no_fx=no_fx,
             player_has_clawline=handicaps.has_clawline,
             player_has_dash=handicaps.has_dash,
+            player_has_double_jump=handicaps.has_double_jump,
             player_has_silkspear=handicaps.has_silkspear,
         )
 
