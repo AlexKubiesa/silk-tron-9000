@@ -11,6 +11,7 @@ public static class CommandLineArgs
     public static bool PlayerHasClawline { get; private set; } = true;
     public static bool PlayerHasDash { get; private set; } = true;
     public static bool PlayerHasDoubleJump { get; private set; } = true;
+    public static bool PlayerHasDriftersCloak { get; private set; } = true;
     public static bool PlayerHasSilkspear { get; private set; } = true;
     public static Boss Boss { get; private set; } = Boss.GetById(BossId.Lace);
 
@@ -67,6 +68,14 @@ public static class CommandLineArgs
                 {
                     PlayerHasDoubleJump = hasDoubleJump;
                     Plugin.Logger.LogInfo($"Set PlayerHasDoubleJump to {PlayerHasDoubleJump}");
+                }
+            }
+            else if (args[i] == "--player-has-drifters-cloak" && i + 1 < args.Length)
+            {
+                if (bool.TryParse(args[i + 1], out bool hasDriftersCloak))
+                {
+                    PlayerHasDriftersCloak = hasDriftersCloak;
+                    Plugin.Logger.LogInfo($"Set PlayerHasDriftersCloak to {PlayerHasDriftersCloak}");
                 }
             }
             else if (args[i] == "--player-has-silkspear" && i + 1 < args.Length)

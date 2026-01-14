@@ -14,6 +14,7 @@ handicaps:
   has_clawline: false
   has_dash: false
   has_double_jump: false
+  has_drifters_cloak: false
   has_silkspear: false
 
 # PPO hyperparameters

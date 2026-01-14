@@ -222,6 +222,7 @@ class SilkSongSharedMemory:
         player_has_clawline: bool = True,
         player_has_dash: bool = True,
         player_has_double_jump: bool = True,
+        player_has_drifters_cloak: bool = True,
         player_has_silkspear: bool = True,
         timeout_ms: int | None = None,
     ):
@@ -232,6 +233,7 @@ class SilkSongSharedMemory:
         self.player_has_clawline = player_has_clawline
         self.player_has_dash = player_has_dash
         self.player_has_double_jump = player_has_double_jump
+        self.player_has_drifters_cloak = player_has_drifters_cloak
         self.player_has_silkspear = player_has_silkspear
         self.process = None
         self.timeout_ms = (
@@ -414,6 +416,12 @@ class SilkSongSharedMemory:
             [
                 "--player-has-double-jump",
                 "true" if self.player_has_double_jump else "false",
+            ]
+        )
+        args.extend(
+            [
+                "--player-has-drifters-cloak",
+                "true" if self.player_has_drifters_cloak else "false",
             ]
         )
         args.extend(
