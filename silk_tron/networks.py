@@ -127,7 +127,6 @@ class TensorboardCallback(BaseCallback):
         self.lowest_boss_hps = deque(maxlen=buffer_size)
         self.reward_components = defaultdict(partial(deque, maxlen=buffer_size))
         self.action_proportions = defaultdict(partial(deque, maxlen=buffer_size))
-        self.successes = deque(maxlen=buffer_size)
 
     def _on_step(self) -> bool:
         for i, info in enumerate(self.locals.get("infos", [])):
@@ -138,7 +137,6 @@ class TensorboardCallback(BaseCallback):
                 hurt_count = info["hurt_count"]
                 action_counts = info.get("action_counts")
                 total_steps = info["total_steps"]
-                success = info["success"]
 
                 if episode_reward > self.highest_reward:
                     self.highest_reward = episode_reward
@@ -146,7 +144,6 @@ class TensorboardCallback(BaseCallback):
                 self.attack_counts.append(attack_count)
                 self.hurt_counts.append(hurt_count)
                 self.lowest_boss_hps.append(lowest_boss_hp)
-                self.successes.append(int(success))
 
                 self.logger.record(  # TODO: Probably cleaner to log these outside the loop
                     "episode/attack_count_mean", np.mean(self.attack_counts)
@@ -156,7 +153,6 @@ class TensorboardCallback(BaseCallback):
                     "episode/lowest_boss_hp_mean", np.mean(self.lowest_boss_hps)
                 )
                 self.logger.record("episode/highest_reward", self.highest_reward)
-                self.logger.record("episode/win_rate", np.mean(self.successes))
 
                 # Track action proportions
                 if action_counts is not None and total_steps > 0:

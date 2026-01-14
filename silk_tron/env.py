@@ -380,7 +380,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             info["heal_count"] = self.heal_count
             info["hurt_count"] = self.hurt_count
             info["action_counts"] = self.action_counts.copy()
-            info["success"] = self._is_success(game_state)
+            info["is_success"] = self._is_success(game_state)
 
         return info
 

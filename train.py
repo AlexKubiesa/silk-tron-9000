@@ -578,9 +578,9 @@ def evaluate(
             episode_length += 1
 
         # Track win status from info
-        episode_success = info[0].get("success", False)
+        episode_success = info[0].get("is_success", False)
         episode_wins.append(episode_success)
-        
+
         episode_rewards.append(episode_reward)
         episode_lengths.append(episode_length)
         win_status = "WIN" if episode_success else "LOSS"
