@@ -17,4 +17,6 @@ public static class Constants
     public const string MenuTitleScene = "Menu_Title";
 
     public const int ConsecutiveFrameThreshold = 3;
+
+    public const string SilkspearToolName = "Silk Spear";
 }

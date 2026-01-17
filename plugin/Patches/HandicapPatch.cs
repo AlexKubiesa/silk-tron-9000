@@ -58,7 +58,7 @@ public static class HandicapPatch
             for (int i = 0; i < toolCrestData.Slots.Count; i++)
             {
                 var slotData = toolCrestData.Slots[i];
-                if (slotData.EquippedTool == "Silk Spear")
+                if (slotData.EquippedTool == Constants.SilkspearToolName)
                 {
                     slotData.EquippedTool = null;
                     // We need to assign slotData back to the list because it's a struct.
