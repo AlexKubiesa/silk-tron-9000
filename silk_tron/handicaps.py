@@ -13,3 +13,4 @@ class HandicapConfig:
     has_drifters_cloak: bool = True
     has_silkspear: bool = True
     max_health: int = 9
+    needle_upgrades: int = 3

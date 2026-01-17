@@ -17,6 +17,7 @@ handicaps:
   has_drifters_cloak: false
   has_silkspear: false
   max_health: 5
+  needle_upgrades: 0
 
 # PPO hyperparameters
 learning_rate: 0.0009654400943128438
