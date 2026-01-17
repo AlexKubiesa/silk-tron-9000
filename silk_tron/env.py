@@ -94,6 +94,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             player_has_dash=handicaps.has_dash,
             player_has_double_jump=handicaps.has_double_jump,
             player_has_drifters_cloak=handicaps.has_drifters_cloak,
+            player_has_needle_strike=handicaps.has_needle_strike,
             player_has_silkspear=handicaps.has_silkspear,
             player_max_health=handicaps.max_health,
             player_max_silk=handicaps.max_silk,

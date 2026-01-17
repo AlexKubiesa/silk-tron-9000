@@ -15,6 +15,7 @@ handicaps:
   has_dash: false
   has_double_jump: false
   has_drifters_cloak: false
+  has_needle_strike: false
   has_silkspear: false
   max_health: 5
   max_silk: 9

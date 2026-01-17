@@ -223,6 +223,7 @@ class SilkSongSharedMemory:
         player_has_dash: bool = True,
         player_has_double_jump: bool = True,
         player_has_drifters_cloak: bool = True,
+        player_has_needle_strike: bool = True,
         player_has_silkspear: bool = True,
         player_max_health: int = 9,
         player_max_silk: int = 18,
@@ -238,6 +239,7 @@ class SilkSongSharedMemory:
         self.player_has_dash = player_has_dash
         self.player_has_double_jump = player_has_double_jump
         self.player_has_drifters_cloak = player_has_drifters_cloak
+        self.player_has_needle_strike = player_has_needle_strike
         self.player_has_silkspear = player_has_silkspear
         self.player_max_health = player_max_health
         self.player_max_silk = player_max_silk
@@ -430,6 +432,12 @@ class SilkSongSharedMemory:
             [
                 "--player-has-drifters-cloak",
                 "true" if self.player_has_drifters_cloak else "false",
+            ]
+        )
+        args.extend(
+            [
+                "--player-has-needle-strike",
+                "true" if self.player_has_needle_strike else "false",
             ]
         )
         args.extend(

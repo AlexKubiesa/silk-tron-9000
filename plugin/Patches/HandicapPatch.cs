@@ -32,16 +32,23 @@ public static class HandicapPatch
 
     private static void SetHandicaps(PlayerData playerData)
     {
+        // Has needle strike
+        playerData.hasChargeSlash = CommandLineArgs.PlayerHasNeedleStrike;
+
+        // Max health
         playerData.maxHealthBase = CommandLineArgs.PlayerMaxHealth;
         playerData.maxHealth = CommandLineArgs.PlayerMaxHealth;
         playerData.health = CommandLineArgs.PlayerMaxHealth;
         playerData.prevHealth = CommandLineArgs.PlayerMaxHealth;
 
-        playerData.nailUpgrades = CommandLineArgs.PlayerNeedleUpgrades;
-
+        // Max silk
         playerData.silk = CommandLineArgs.PlayerMaxSilk;
         playerData.silkMax = CommandLineArgs.PlayerMaxSilk;
 
+        // Nail upgrades
+        playerData.nailUpgrades = CommandLineArgs.PlayerNeedleUpgrades;
+
+        // Silk hearts
         playerData.silkRegenMax = CommandLineArgs.PlayerSilkHearts;
     }
 }

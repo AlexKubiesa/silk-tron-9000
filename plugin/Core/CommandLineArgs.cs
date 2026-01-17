@@ -12,6 +12,7 @@ public static class CommandLineArgs
     public static bool PlayerHasDash { get; private set; } = true;
     public static bool PlayerHasDoubleJump { get; private set; } = true;
     public static bool PlayerHasDriftersCloak { get; private set; } = true;
+    public static bool PlayerHasNeedleStrike { get; private set; } = true;
     public static bool PlayerHasSilkspear { get; private set; } = true;
     public static int PlayerMaxHealth { get; private set; } = 9;
     public static int PlayerMaxSilk { get; private set; } = 18;
@@ -80,6 +81,14 @@ public static class CommandLineArgs
                 {
                     PlayerHasDriftersCloak = hasDriftersCloak;
                     Plugin.Logger.LogInfo($"Set PlayerHasDriftersCloak to {PlayerHasDriftersCloak}");
+                }
+            }
+            else if (args[i] == "--player-has-needle-strike" && i + 1 < args.Length)
+            {
+                if (bool.TryParse(args[i + 1], out bool hasNeedleStrike))
+                {
+                    PlayerHasNeedleStrike = hasNeedleStrike;
+                    Plugin.Logger.LogInfo($"Set PlayerHasNeedleStrike to {PlayerHasNeedleStrike}");
                 }
             }
             else if (args[i] == "--player-has-silkspear" && i + 1 < args.Length)
