@@ -12,3 +12,4 @@ class HandicapConfig:
     has_double_jump: bool = True
     has_drifters_cloak: bool = True
     has_silkspear: bool = True
+    max_health: int = 9

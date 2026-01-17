@@ -224,6 +224,7 @@ class SilkSongSharedMemory:
         player_has_double_jump: bool = True,
         player_has_drifters_cloak: bool = True,
         player_has_silkspear: bool = True,
+        player_max_health: int = 9,
         timeout_ms: int | None = None,
     ):
         self.boss = boss
@@ -235,6 +236,7 @@ class SilkSongSharedMemory:
         self.player_has_double_jump = player_has_double_jump
         self.player_has_drifters_cloak = player_has_drifters_cloak
         self.player_has_silkspear = player_has_silkspear
+        self.player_max_health = player_max_health
         self.process = None
         self.timeout_ms = (
             timeout_ms if timeout_ms is not None else self.DEFAULT_TIMEOUT_MS
@@ -427,6 +429,7 @@ class SilkSongSharedMemory:
         args.extend(
             ["--player-has-silkspear", "true" if self.player_has_silkspear else "false"]
         )
+        args.extend(["--player-max-health", str(self.player_max_health)])
 
         print(f"Launching game from: {game_path}")
 
