@@ -15,3 +15,4 @@ class HandicapConfig:
     max_health: int = 9
     max_silk: int = 18
     needle_upgrades: int = 3
+    silk_hearts: int = 2

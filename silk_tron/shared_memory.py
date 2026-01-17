@@ -227,6 +227,7 @@ class SilkSongSharedMemory:
         player_max_health: int = 9,
         player_max_silk: int = 18,
         player_needle_upgrades: int = 3,
+        player_silk_hearts: int = 2,
         timeout_ms: int | None = None,
     ):
         self.boss = boss
@@ -241,6 +242,7 @@ class SilkSongSharedMemory:
         self.player_max_health = player_max_health
         self.player_max_silk = player_max_silk
         self.player_needle_upgrades = player_needle_upgrades
+        self.player_silk_hearts = player_silk_hearts
         self.process = None
         self.timeout_ms = (
             timeout_ms if timeout_ms is not None else self.DEFAULT_TIMEOUT_MS
@@ -436,6 +438,7 @@ class SilkSongSharedMemory:
         args.extend(["--player-max-health", str(self.player_max_health)])
         args.extend(["--player-max-silk", str(self.player_max_silk)])
         args.extend(["--player-needle-upgrades", str(self.player_needle_upgrades)])
+        args.extend(["--player-silk-hearts", str(self.player_silk_hearts)])
 
         print(f"Launching game from: {game_path}")
 

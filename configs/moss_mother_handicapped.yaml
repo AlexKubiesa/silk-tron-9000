@@ -19,6 +19,7 @@ handicaps:
   max_health: 5
   max_silk: 9
   needle_upgrades: 0
+  silk_hearts: 0
 
 # PPO hyperparameters
 learning_rate: 0.0009654400943128438

@@ -16,6 +16,7 @@ public static class CommandLineArgs
     public static int PlayerMaxHealth { get; private set; } = 9;
     public static int PlayerMaxSilk { get; private set; } = 18;
     public static int PlayerNeedleUpgrades { get; private set; } = 3;
+    public static int PlayerSilkHearts { get; private set; } = 2;
     public static Boss Boss { get; private set; } = Boss.GetById(BossId.Lace);
 
     public static void Parse()
@@ -111,6 +112,14 @@ public static class CommandLineArgs
                 {
                     PlayerNeedleUpgrades = needleUpgrades;
                     Plugin.Logger.LogInfo($"Set PlayerNeedleUpgrades to {PlayerNeedleUpgrades}");
+                }
+            }
+            else if (args[i] == "--player-silk-hearts" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[i + 1], out int silkHearts))
+                {
+                    PlayerSilkHearts = silkHearts;
+                    Plugin.Logger.LogInfo($"Set PlayerSilkHearts to {PlayerSilkHearts}");
                 }
             }
             else if (args[i] == "--boss" && i + 1 < args.Length)

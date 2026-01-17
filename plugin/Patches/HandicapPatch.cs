@@ -41,5 +41,7 @@ public static class HandicapPatch
 
         playerData.silk = CommandLineArgs.PlayerMaxSilk;
         playerData.silkMax = CommandLineArgs.PlayerMaxSilk;
+
+        playerData.silkRegenMax = CommandLineArgs.PlayerSilkHearts;
     }
 }

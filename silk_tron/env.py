@@ -98,6 +98,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             player_max_health=handicaps.max_health,
             player_max_silk=handicaps.max_silk,
             player_needle_upgrades=handicaps.needle_upgrades,
+            player_silk_hearts=handicaps.silk_hearts,
         )
 
     def reset(self, seed=None, options=None):
