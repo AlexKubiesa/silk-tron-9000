@@ -75,7 +75,7 @@ public static class HandicapPatch
         playerData.silk = CommandLineArgs.PlayerMaxSilk;
         playerData.silkMax = CommandLineArgs.PlayerMaxSilk;
 
-        // Nail upgrades
+        // Needle upgrades
         playerData.nailUpgrades = CommandLineArgs.PlayerNeedleUpgrades;
 
         // Silk hearts
