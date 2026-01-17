@@ -32,25 +32,45 @@ public static class HandicapPatch
 
     private static void SetHandicaps(PlayerData playerData)
     {
-        // Has clawline
         playerData.hasHarpoonDash = CommandLineArgs.PlayerHasClawline;
-
-        // Has cling grip
         playerData.hasWalljump = CommandLineArgs.PlayerHasClingGrip;
-
-        // Has dash
         playerData.hasDash = CommandLineArgs.PlayerHasDash;
-
-        // Has double jump
         playerData.hasDoubleJump = CommandLineArgs.PlayerHasDoubleJump;
-
-        // Has drifter's cloak
         playerData.hasBrolly = CommandLineArgs.PlayerHasDriftersCloak;
-
-        // Has needle strike
         playerData.hasChargeSlash = CommandLineArgs.PlayerHasNeedleStrike;
+        ApplyHunterCrestVersion(playerData);
+        // Must be applied after hunter crest version, to ensure Silkspear is removed from the correct crest.
+        ApplyHasSilkspear(playerData);
+        ApplyMaxHealth(playerData);
+        ApplyMaxSilk(playerData);
+        playerData.nailUpgrades = CommandLineArgs.PlayerNeedleUpgrades;
+        playerData.silkRegenMax = CommandLineArgs.PlayerSilkHearts;
+    }
 
-        // Has silkspear
+    private static void ApplyHunterCrestVersion(PlayerData playerData)
+    {
+        string crestId = playerData.CurrentCrestID;
+        if (crestId.StartsWith("Hunter"))
+        {
+            string newCrestId = GetHunterCrestId(CommandLineArgs.PlayerHunterCrestVersion);
+            if (newCrestId != crestId)
+            {
+                Plugin.Logger.LogInfo($"Changing hunter crest from {crestId} to {newCrestId}");
+                playerData.CurrentCrestID = newCrestId;
+            }
+        }
+    }
+
+    private static string GetHunterCrestId(int version) => version switch
+    {
+        1 => "Hunter",
+        2 => "Hunter_v2",
+        3 => "Hunter_v3",
+        _ => throw new System.ArgumentOutOfRangeException($"Invalid hunter crest version: {version}"),
+    };
+
+    private static void ApplyHasSilkspear(PlayerData playerData)
+    {
         if (!CommandLineArgs.PlayerHasSilkspear)
         {
             string crest = playerData.CurrentCrestID;
@@ -67,21 +87,19 @@ public static class HandicapPatch
                 }
             }
         }
+    }
 
-        // Max health
+    private static void ApplyMaxHealth(PlayerData playerData)
+    {
         playerData.maxHealthBase = CommandLineArgs.PlayerMaxHealth;
         playerData.maxHealth = CommandLineArgs.PlayerMaxHealth;
         playerData.health = CommandLineArgs.PlayerMaxHealth;
         playerData.prevHealth = CommandLineArgs.PlayerMaxHealth;
+    }
 
-        // Max silk
+    private static void ApplyMaxSilk(PlayerData playerData)
+    {
         playerData.silk = CommandLineArgs.PlayerMaxSilk;
         playerData.silkMax = CommandLineArgs.PlayerMaxSilk;
-
-        // Needle upgrades
-        playerData.nailUpgrades = CommandLineArgs.PlayerNeedleUpgrades;
-
-        // Silk hearts
-        playerData.silkRegenMax = CommandLineArgs.PlayerSilkHearts;
     }
 }

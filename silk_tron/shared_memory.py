@@ -226,10 +226,11 @@ class SilkSongSharedMemory:
         player_has_drifters_cloak: bool = True,
         player_has_needle_strike: bool = True,
         player_has_silkspear: bool = True,
+        player_hunter_crest_version: int = 3,
         player_max_health: int = 9,
         player_max_silk: int = 18,
-        player_needle_upgrades: int = 3,
-        player_silk_hearts: int = 2,
+        player_needle_upgrades: int = 4,
+        player_silk_hearts: int = 3,
         timeout_ms: int | None = None,
     ):
         self.boss = boss
@@ -243,6 +244,7 @@ class SilkSongSharedMemory:
         self.player_has_drifters_cloak = player_has_drifters_cloak
         self.player_has_needle_strike = player_has_needle_strike
         self.player_has_silkspear = player_has_silkspear
+        self.player_hunter_crest_version = player_hunter_crest_version
         self.player_max_health = player_max_health
         self.player_max_silk = player_max_silk
         self.player_needle_upgrades = player_needle_upgrades
@@ -424,7 +426,10 @@ class SilkSongSharedMemory:
             ["--player-has-clawline", "true" if self.player_has_clawline else "false"]
         )
         args.extend(
-            ["--player-has-cling-grip", "true" if self.player_has_cling_grip else "false"]
+            [
+                "--player-has-cling-grip",
+                "true" if self.player_has_cling_grip else "false",
+            ]
         )
         args.extend(["--player-has-dash", "true" if self.player_has_dash else "false"])
         args.extend(
@@ -447,6 +452,9 @@ class SilkSongSharedMemory:
         )
         args.extend(
             ["--player-has-silkspear", "true" if self.player_has_silkspear else "false"]
+        )
+        args.extend(
+            ["--player-hunter-crest-version", str(self.player_hunter_crest_version)]
         )
         args.extend(["--player-max-health", str(self.player_max_health)])
         args.extend(["--player-max-silk", str(self.player_max_silk)])

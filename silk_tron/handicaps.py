@@ -14,7 +14,8 @@ class HandicapConfig:
     has_drifters_cloak: bool = True
     has_needle_strike: bool = True
     has_silkspear: bool = True
+    hunter_crest_version: int = 3
     max_health: int = 9
     max_silk: int = 18
-    needle_upgrades: int = 3
-    silk_hearts: int = 2
+    needle_upgrades: int = 4
+    silk_hearts: int = 3

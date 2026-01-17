@@ -18,6 +18,7 @@ handicaps:
   has_drifters_cloak: true
   has_needle_strike: true
   has_silkspear: true
+  hunter_crest_version: 2
   max_health: 9
   max_silk: 18
   needle_upgrades: 3

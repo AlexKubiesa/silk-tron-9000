@@ -15,10 +15,11 @@ public static class CommandLineArgs
     public static bool PlayerHasDriftersCloak { get; private set; } = true;
     public static bool PlayerHasNeedleStrike { get; private set; } = true;
     public static bool PlayerHasSilkspear { get; private set; } = true;
+    public static int PlayerHunterCrestVersion { get; private set; } = 3;
     public static int PlayerMaxHealth { get; private set; } = 9;
     public static int PlayerMaxSilk { get; private set; } = 18;
-    public static int PlayerNeedleUpgrades { get; private set; } = 3;
-    public static int PlayerSilkHearts { get; private set; } = 2;
+    public static int PlayerNeedleUpgrades { get; private set; } = 4;
+    public static int PlayerSilkHearts { get; private set; } = 3;
     public static Boss Boss { get; private set; } = Boss.GetById(BossId.Lace);
 
     public static void Parse()
@@ -106,6 +107,14 @@ public static class CommandLineArgs
                 {
                     PlayerHasSilkspear = hasSilkspear;
                     Plugin.Logger.LogInfo($"Set PlayerHasSilkspear to {PlayerHasSilkspear}");
+                }
+            }
+            else if (args[i] == "--player-hunter-crest-version" && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[i + 1], out int hunterCrestVersion))
+                {
+                    PlayerHunterCrestVersion = hunterCrestVersion;
+                    Plugin.Logger.LogInfo($"Set PlayerHunterCrestVersion to {PlayerHunterCrestVersion}");
                 }
             }
             else if (args[i] == "--player-max-health" && i + 1 < args.Length)
