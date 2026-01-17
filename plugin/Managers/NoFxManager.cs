@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -66,11 +67,11 @@ public class NoFxManager : MonoBehaviour
         if (CommandLineArgs.NoFx)
         {
             DisableEffectRenderers();
-            DisableCpuHeavyComponents();
+            StartCoroutine(DisableCpuHeavyComponents());
         }
     }
 
-    private void DisableCpuHeavyComponents()
+    private IEnumerator DisableCpuHeavyComponents()
     {
         DisableComponents<InputDebugger>();
         DisableComponents<PerformanceHud>();
@@ -100,6 +101,9 @@ public class NoFxManager : MonoBehaviour
         DisableComponents<StatusVignette>();
 
         DisableComponents<AudioEventManager>();
+        // Give AudioLoopMaster a frame to initialize before disabling it, otherwise a
+        // later coroutine throws an exception.
+        yield return null;
         DisableComponents<AudioLoopMaster>();
         DisableComponents<AudioSourceFadeControl>();
         DisableComponents<AudioPlayWhenGrounded>();
