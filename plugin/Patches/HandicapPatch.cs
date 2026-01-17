@@ -38,5 +38,8 @@ public static class HandicapPatch
         playerData.prevHealth = CommandLineArgs.PlayerMaxHealth;
 
         playerData.nailUpgrades = CommandLineArgs.PlayerNeedleUpgrades;
+
+        playerData.silk = CommandLineArgs.PlayerMaxSilk;
+        playerData.silkMax = CommandLineArgs.PlayerMaxSilk;
     }
 }
