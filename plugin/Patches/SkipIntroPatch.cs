@@ -80,8 +80,6 @@ internal static class SkipIntroPatch
             yield return new WaitForEndOfFrame();
         }
 
-        HandicapManager.ApplyHandicaps();
-
         SharedMemoryManager.Instance.WriteState(StateType.Ready);
     }
 

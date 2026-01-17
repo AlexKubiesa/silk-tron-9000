@@ -32,8 +32,38 @@ public static class HandicapPatch
 
     private static void SetHandicaps(PlayerData playerData)
     {
+        // Has clawline
+        playerData.hasHarpoonDash = CommandLineArgs.PlayerHasClawline;
+
+        // Has dash
+        playerData.hasDash = CommandLineArgs.PlayerHasDash;
+
+        // Has double jump
+        playerData.hasDoubleJump = CommandLineArgs.PlayerHasDoubleJump;
+
+        // Has drifter's cloak
+        playerData.hasBrolly = CommandLineArgs.PlayerHasDriftersCloak;
+
         // Has needle strike
         playerData.hasChargeSlash = CommandLineArgs.PlayerHasNeedleStrike;
+
+        // Has silkspear
+        if (!CommandLineArgs.PlayerHasSilkspear)
+        {
+            string crest = playerData.CurrentCrestID;
+            var toolCrestData = playerData.ToolEquips.GetData(crest);
+            for (int i = 0; i < toolCrestData.Slots.Count; i++)
+            {
+                var slotData = toolCrestData.Slots[i];
+                if (slotData.EquippedTool == "Silk Spear")
+                {
+                    slotData.EquippedTool = null;
+                    // We need to assign slotData back to the list because it's a struct.
+                    toolCrestData.Slots[i] = slotData;
+                    break;
+                }
+            }
+        }
 
         // Max health
         playerData.maxHealthBase = CommandLineArgs.PlayerMaxHealth;
