@@ -220,6 +220,7 @@ class SilkSongSharedMemory:
         time_scale: float = 1.0,
         no_fx: bool = False,
         player_has_clawline: bool = True,
+        player_has_cling_grip: bool = True,
         player_has_dash: bool = True,
         player_has_double_jump: bool = True,
         player_has_drifters_cloak: bool = True,
@@ -236,6 +237,7 @@ class SilkSongSharedMemory:
         self.time_scale = time_scale
         self.no_fx = no_fx
         self.player_has_clawline = player_has_clawline
+        self.player_has_cling_grip = player_has_cling_grip
         self.player_has_dash = player_has_dash
         self.player_has_double_jump = player_has_double_jump
         self.player_has_drifters_cloak = player_has_drifters_cloak
@@ -420,6 +422,9 @@ class SilkSongSharedMemory:
             args.append("--no-fx")
         args.extend(
             ["--player-has-clawline", "true" if self.player_has_clawline else "false"]
+        )
+        args.extend(
+            ["--player-has-cling-grip", "true" if self.player_has_cling_grip else "false"]
         )
         args.extend(["--player-has-dash", "true" if self.player_has_dash else "false"])
         args.extend(

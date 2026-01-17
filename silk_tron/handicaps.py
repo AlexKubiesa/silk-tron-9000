@@ -8,6 +8,7 @@ class HandicapConfig:
     """Configuration for player handicaps."""
 
     has_clawline: bool = True
+    has_cling_grip: bool = True
     has_dash: bool = True
     has_double_jump: bool = True
     has_drifters_cloak: bool = True

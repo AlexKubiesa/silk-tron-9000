@@ -9,6 +9,7 @@ public static class CommandLineArgs
     public static bool Manual { get; private set; } = false;
     public static bool NoFx { get; private set; } = false;
     public static bool PlayerHasClawline { get; private set; } = true;
+    public static bool PlayerHasClingGrip { get; private set; } = true;
     public static bool PlayerHasDash { get; private set; } = true;
     public static bool PlayerHasDoubleJump { get; private set; } = true;
     public static bool PlayerHasDriftersCloak { get; private set; } = true;
@@ -57,6 +58,14 @@ public static class CommandLineArgs
                 {
                     PlayerHasClawline = hasClawline;
                     Plugin.Logger.LogInfo($"Set PlayerHasClawline to {PlayerHasClawline}");
+                }
+            }
+            else if (args[i] == "--player-has-cling-grip" && i + 1 < args.Length)
+            {
+                if (bool.TryParse(args[i + 1], out bool hasClingGrip))
+                {
+                    PlayerHasClingGrip = hasClingGrip;
+                    Plugin.Logger.LogInfo($"Set PlayerHasClingGrip to {PlayerHasClingGrip}");
                 }
             }
             else if (args[i] == "--player-has-dash" && i + 1 < args.Length)

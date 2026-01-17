@@ -12,6 +12,7 @@ seed: 123  # null means random seed
 # Handicap system
 handicaps:
   has_clawline: false
+  has_cling_grip: false
   has_dash: false
   has_double_jump: false
   has_drifters_cloak: false

@@ -35,6 +35,9 @@ public static class HandicapPatch
         // Has clawline
         playerData.hasHarpoonDash = CommandLineArgs.PlayerHasClawline;
 
+        // Has cling grip
+        playerData.hasWalljump = CommandLineArgs.PlayerHasClingGrip;
+
         // Has dash
         playerData.hasDash = CommandLineArgs.PlayerHasDash;
 
