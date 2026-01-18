@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace SilkTron;
+namespace SilkTronPlugin;
 
 [HarmonyPatch]
 public class PlayerDeathPatch
