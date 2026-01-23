@@ -274,6 +274,9 @@ def train(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     handicaps: HandicapConfig | None = None,
+    features_dim: int = 256,
+    pi_layers: list[int] | None = None,
+    vf_layers: list[int] | None = None,
 ):
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
@@ -390,10 +393,15 @@ def train(
         print("Initializing new VecNormalize...")
         env = VecNormalize(env, norm_obs=False, norm_reward=True)
 
+    if pi_layers is None:
+        pi_layers = [128]
+    if vf_layers is None:
+        vf_layers = [128]
+
     policy_kwargs = dict(
         features_extractor_class=MultiHeadFeatureExtractor,
-        features_extractor_kwargs=dict(features_dim=256),
-        net_arch=dict(pi=[128], vf=[128]),
+        features_extractor_kwargs=dict(features_dim=features_dim),
+        net_arch=dict(pi=pi_layers, vf=vf_layers),
         activation_fn=nn.ReLU,
     )
 
@@ -712,4 +720,7 @@ if __name__ == "__main__":
             time_penalty_coef=config.get("time_penalty_coef", 0.0001),
             silk_coef=config.get("silk_coef", 0.0),
             handicaps=handicaps,
+            features_dim=features_dim,
+            pi_layers=pi_layers,
+            vf_layers=vf_layers,
         )

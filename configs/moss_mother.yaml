@@ -51,3 +51,55 @@ too_close_coef: 0.001
 too_close_threshold: 1.0
 time_penalty_coef: 0.0001
 silk_coef: 0.0
+
+tuning:
+  search_space:
+    learning_rate:
+      type: float
+      low: 1.0e-5
+      high: 1.0e-3
+      log: true
+    n_steps:
+      type: categorical
+      choices: [512, 1024, 2048, 4096, 8192]
+    batch_size:
+      type: categorical
+      choices: [64, 128, 256, 512]
+    n_epochs:
+      type: int
+      low: 3
+      high: 10
+    gamma:
+      type: float
+      low: 0.95
+      high: 0.999
+    gae_lambda:
+      type: float
+      low: 0.9
+      high: 0.99
+    clip_range:
+      type: float
+      low: 0.1
+      high: 0.3
+    ent_coef:
+      type: float
+      low: 0.001
+      high: 0.1
+      log: true
+    vf_coef:
+      type: float
+      low: 0.3
+      high: 0.7
+    max_grad_norm:
+      type: float
+      low: 0.3
+      high: 1.0
+    features_dim:
+      type: categorical
+      choices: [128, 256]
+    pi_layers:
+      type: categorical
+      choices: [[128], [256]]
+    vf_layers:
+      type: categorical
+      choices: [[128], [256]]

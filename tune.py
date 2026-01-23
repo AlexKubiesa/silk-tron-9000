@@ -30,36 +30,118 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def get_hyperparameters(trial: optuna.Trial) -> Dict[str, Any]:
-    learning_rate = trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True)
-    n_steps = trial.suggest_categorical("n_steps", [512, 1024, 2048, 4096, 8192])
-    batch_size = trial.suggest_categorical("batch_size", [64, 128, 256, 512])
-    n_epochs = trial.suggest_int("n_epochs", 3, 10)
-    gamma = trial.suggest_float("gamma", 0.95, 0.999)
-    gae_lambda = trial.suggest_float("gae_lambda", 0.9, 0.99)
-    clip_range = trial.suggest_float("clip_range", 0.1, 0.3)
-    ent_coef = trial.suggest_float("ent_coef", 0.001, 0.1, log=True)
-    vf_coef = trial.suggest_float("vf_coef", 0.3, 0.7)
-    max_grad_norm = trial.suggest_float("max_grad_norm", 0.3, 1.0)
-    features_dim = trial.suggest_categorical("features_dim", [128, 256])
-    pi_layers = trial.suggest_categorical("pi_layers", [128, 256])
-    vf_layers = trial.suggest_categorical("vf_layers", [128, 256])
+def _build_fixed_params(config: Dict[str, Any]) -> Dict[str, Any]:
+    required_keys = [
+        "learning_rate",
+        "n_steps",
+        "batch_size",
+        "n_epochs",
+        "gamma",
+        "gae_lambda",
+        "clip_range",
+        "ent_coef",
+        "vf_coef",
+        "max_grad_norm",
+        "features_dim",
+        "pi_layers",
+        "vf_layers",
+    ]
+
+    missing = [key for key in required_keys if key not in config]
+    if missing:
+        missing_str = ", ".join(missing)
+        raise ValueError(
+            f"Config missing required hyperparameters for tuning: {missing_str}"
+        )
 
     return {
-        "learning_rate": learning_rate,
-        "n_steps": n_steps,
-        "batch_size": batch_size,
-        "n_epochs": n_epochs,
-        "gamma": gamma,
-        "gae_lambda": gae_lambda,
-        "clip_range": clip_range,
-        "ent_coef": ent_coef,
-        "vf_coef": vf_coef,
-        "max_grad_norm": max_grad_norm,
-        "features_dim": features_dim,
-        "pi_layers": pi_layers,
-        "vf_layers": vf_layers,
+        "learning_rate": config["learning_rate"],
+        "n_steps": config["n_steps"],
+        "batch_size": config["batch_size"],
+        "n_epochs": config["n_epochs"],
+        "gamma": config["gamma"],
+        "gae_lambda": config["gae_lambda"],
+        "clip_range": config["clip_range"],
+        "ent_coef": config["ent_coef"],
+        "vf_coef": config["vf_coef"],
+        "max_grad_norm": config["max_grad_norm"],
+        "features_dim": config["features_dim"],
+        "pi_layers": config["pi_layers"],
+        "vf_layers": config["vf_layers"],
     }
+
+
+def _suggest_from_space(
+    trial: optuna.Trial, name: str, spec: Dict[str, Any]
+) -> Any:
+    if not isinstance(spec, dict):
+        raise ValueError(f"Search space for {name} must be a dict, got {spec}")
+
+    param_type = spec.get("type")
+    if param_type is None:
+        raise ValueError(f"Search space for {name} must include a 'type' field")
+
+    if param_type == "float":
+        low = spec.get("low")
+        high = spec.get("high")
+        if low is None or high is None:
+            raise ValueError(f"Float space for {name} requires low/high")
+        log = bool(spec.get("log", False))
+        step = spec.get("step")
+        if log and step is not None:
+            raise ValueError(f"Float space for {name} cannot use log with step")
+        return trial.suggest_float(name, low, high, log=log, step=step)
+
+    if param_type == "int":
+        low = spec.get("low")
+        high = spec.get("high")
+        if low is None or high is None:
+            raise ValueError(f"Int space for {name} requires low/high")
+        step = spec.get("step", 1)
+        log = bool(spec.get("log", False))
+        return trial.suggest_int(name, low, high, step=step, log=log)
+
+    if param_type == "categorical":
+        choices = spec.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise ValueError(f"Categorical space for {name} requires choices list")
+        return trial.suggest_categorical(name, choices)
+
+    raise ValueError(f"Unsupported search space type '{param_type}' for {name}")
+
+
+def get_hyperparameters(
+    trial: optuna.Trial,
+    search_space: Dict[str, Any],
+    fixed_params: Dict[str, Any],
+    only_params: list[str] | None = None,
+) -> Dict[str, Any]:
+    if not search_space:
+        raise ValueError("Config tuning.search_space must be defined and non-empty")
+
+    if only_params is not None:
+        unknown = [name for name in only_params if name not in search_space]
+        if unknown:
+            unknown_str = ", ".join(unknown)
+            raise ValueError(
+                f"Unknown parameter(s) in --only-params: {unknown_str}"
+            )
+        only_set = set(only_params)
+    else:
+        only_set = None
+
+    params: Dict[str, Any] = {}
+    for name, spec in search_space.items():
+        if only_set is not None and name not in only_set:
+            if name not in fixed_params:
+                raise ValueError(
+                    f"No fixed config value available for '{name}' when excluded"
+                )
+            params[name] = fixed_params[name]
+            continue
+        params[name] = _suggest_from_space(trial, name, spec)
+
+    return params
 
 
 class DummyCallback(BaseCallback):
@@ -181,6 +263,9 @@ def objective(
     eval_freq: int,
     n_eval_episodes: int,
     time_scale: float,
+    search_space: Dict[str, Any],
+    fixed_params: Dict[str, Any],
+    only_params: list[str] | None,
     boss_damage_coef: float = 1.0,
     boss_defeat_coef: float = 0.0,
     player_damage_coef: float = 0.1,
@@ -198,7 +283,7 @@ def objective(
         handicaps = HandicapConfig()
 
     reset_env_id_counter()
-    params = get_hyperparameters(trial)
+    params = get_hyperparameters(trial, search_space, fixed_params, only_params)
 
     print(f"\n{'='*60}")
     print(f"Trial {trial.number}")
@@ -247,8 +332,8 @@ def objective(
         features_extractor_class=MultiHeadFeatureExtractor,
         features_extractor_kwargs=dict(features_dim=params["features_dim"]),
         net_arch=dict(
-            pi=[params["pi_layers"]],
-            vf=[params["vf_layers"]],
+            pi=params["pi_layers"],
+            vf=params["vf_layers"],
         ),
         activation_fn=nn.ReLU,
     )
@@ -312,6 +397,9 @@ def tune(
     eval_freq: int = 50_000,
     n_eval_episodes: int = 10,
     time_scale: float = 4.0,
+    search_space: Dict[str, Any] | None = None,
+    fixed_params: Dict[str, Any] | None = None,
+    only_params: list[str] | None = None,
     study_name: str = "silksong",
     storage: str | None = None,
     output_dir: str = "./hyperparameters",
@@ -328,6 +416,11 @@ def tune(
 ):
     if handicaps is None:
         handicaps = HandicapConfig()
+
+    if search_space is None:
+        raise ValueError("Config tuning.search_space is required for tuning")
+    if fixed_params is None:
+        raise ValueError("Fixed training params are required for tuning")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -363,6 +456,9 @@ def tune(
                 eval_freq=eval_freq,
                 n_eval_episodes=n_eval_episodes,
                 time_scale=time_scale,
+                search_space=search_space,
+                fixed_params=fixed_params,
+                only_params=only_params,
                 boss_damage_coef=boss_damage_coef,
                 boss_defeat_coef=boss_defeat_coef,
                 player_damage_coef=player_damage_coef,
@@ -441,6 +537,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n-eval-episodes", type=int, default=10, help="Episodes per evaluation"
     )
+    parser.add_argument(
+        "--only-params",
+        type=str,
+        default=None,
+        help="Comma-separated list of hyperparameters to tune (others use config values)",
+    )
     parser.add_argument("--study-name", type=str, default="silk_tron")
     parser.add_argument(
         "--storage",
@@ -457,6 +559,23 @@ if __name__ == "__main__":
     print(f"Loaded config from: {args.config}")
     print(f"Config: {json.dumps(config, indent=2)}")
 
+    tuning = config.get("tuning")
+    if tuning is None or "search_space" not in tuning:
+        raise ValueError(
+            "Config must include tuning.search_space to run hyperparameter tuning"
+        )
+    search_space = tuning["search_space"]
+    if not isinstance(search_space, dict) or not search_space:
+        raise ValueError("tuning.search_space must be a non-empty mapping")
+
+    fixed_params = _build_fixed_params(config)
+
+    only_params = None
+    if args.only_params:
+        only_params = [name.strip() for name in args.only_params.split(",") if name]
+        if not only_params:
+            raise ValueError("--only-params must include at least one name")
+
     # Load handicaps from config
     handicaps_dict = config.get("handicaps", {})
     handicaps = HandicapConfig(**handicaps_dict)
@@ -469,6 +588,9 @@ if __name__ == "__main__":
         eval_freq=args.eval_freq,
         n_eval_episodes=args.n_eval_episodes,
         time_scale=config.get("time_scale", 4.0),
+        search_space=search_space,
+        fixed_params=fixed_params,
+        only_params=only_params,
         study_name=args.study_name,
         storage=args.storage,
         output_dir=args.output_dir,
