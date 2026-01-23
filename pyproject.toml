@@ -9,6 +9,7 @@ dependencies = [
     "gymnasium>=1.2.3",
     "numpy>=2.3.5",
     "optuna>=4.6.0",
+    "optuna-dashboard>=0.20.0",
     "rich>=14.2.0",
     "sb3-contrib>=2.7.1",
     "stable-baselines3>=2.7.1",
