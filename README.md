@@ -51,8 +51,8 @@ The built plugin will be automatically copied to the game's `BepInEx/plugins/` f
 ### Training
 
 ```bash
-uv run train.py --config configs/moss_mother.yaml
-uv run train.py --config configs/moss_mother.yaml --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
+uv run python train.py --config configs/moss_mother.yaml
+uv run python train.py --config configs/moss_mother.yaml --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
 ```
 
 > **Tip**: Use `--no-fx` mode (enabled by default in training) for faster step processing.
@@ -60,7 +60,7 @@ uv run train.py --config configs/moss_mother.yaml --checkpoint ./experiments/run
 ### Evaluation
 
 ```bash
-uv run train.py --eval --config configs/moss_mother.yaml --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
+uv run python train.py --eval --config configs/moss_mother.yaml --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
 ```
 
 ### Tensorboard
