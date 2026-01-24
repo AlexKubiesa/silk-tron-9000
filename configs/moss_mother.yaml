@@ -25,7 +25,7 @@ handicaps:
   silk_hearts: 0
 
 # PPO hyperparameters
-learning_rate: 0.0009654400943128438
+learning_rate: 0.0007969454818643932
 n_steps: 2048
 batch_size: 512
 n_epochs: 4
