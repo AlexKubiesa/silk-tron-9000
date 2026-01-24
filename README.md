@@ -1,6 +1,8 @@
-# SilkTron
+# SilkTron 9000
 
 A reinforcement learning agent for Hollow Knight: Silksong.
+
+The boss fights currently supported are Moss Mother and the second Lace fight.
 
 ## Requirements
 
@@ -49,8 +51,8 @@ The built plugin will be automatically copied to the game's `BepInEx/plugins/` f
 ### Training
 
 ```bash
-uv run train.py
-uv run train.py --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
+uv run train.py --config configs/moss_mother.yaml
+uv run train.py --config configs/moss_mother.yaml --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
 ```
 
 > **Tip**: Use `--no-fx` mode (enabled by default in training) for faster step processing.
@@ -58,7 +60,7 @@ uv run train.py --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_ste
 ### Evaluation
 
 ```bash
-uv run train.py --eval --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
+uv run train.py --eval --config configs/moss_mother.yaml --checkpoint ./experiments/run_abc/checkpoints/rl_model_1000_steps.zip
 ```
 
 ### Tensorboard
@@ -66,3 +68,7 @@ uv run train.py --eval --checkpoint ./experiments/run_abc/checkpoints/rl_model_1
 ```bash
 uv run tensorboard --logdir ./logs
 ```
+
+### Acknowledgements
+
+This project was inspired by https://github.com/deeean/silksong-agent/.
