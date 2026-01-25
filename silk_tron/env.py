@@ -255,8 +255,8 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             game_state.player_vel_y, HERO_VEL_Y_RANGE[0], HERO_VEL_Y_RANGE[1]
         )
 
-        player_health = game_state.player_health / PLAYER_MAX_HEALTH
-        player_silk = game_state.player_silk / PLAYER_MAX_SILK
+        player_health = game_state.player_health / self.handicaps.max_health
+        player_silk = game_state.player_silk / self.handicaps.max_silk
         player_grounded = float(game_state.player_grounded)
         player_can_dash = float(game_state.player_can_dash)
         player_facing_right = float(game_state.player_facing_right)
