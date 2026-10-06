@@ -123,6 +123,7 @@ class SilkSongSharedMemory:
     )
 
     DEFAULT_TIMEOUT_MS = 30000
+    LAUNCH_ATTEMPTS = 3
 
     @staticmethod
     def _create_symlink(link_path: Path, target_path: Path):
@@ -431,6 +432,12 @@ class SilkSongSharedMemory:
     def restart(self):
         print("Restarting game...")
 
+        self._stop_game()
+
+        self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
+        self._start_game()
+
+    def _stop_game(self):
         if self.process is not None:
             try:
                 self.process.terminate()
@@ -441,9 +448,6 @@ class SilkSongSharedMemory:
                 except Exception:
                     pass
             self.process = None
-
-        self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
-        self._start_game()
 
     def _start_game(self):
         game_path = self.get_game_path(self.id)
@@ -510,26 +514,39 @@ class SilkSongSharedMemory:
         env["__GL_SYNC_TO_VBLANK"] = "0"
         env["vblank_mode"] = "0"
 
-        self.process = subprocess.Popen(args, env=env, cwd=game_dir)
+        for attempt in range(1, self.LAUNCH_ATTEMPTS + 1):
+            # Keep the game away from the trainer's terminal. With BepInEx's console
+            # enabled, games attached to a terminal either fail to load BepInEx or hang
+            # at startup, especially when several start at once.
+            with open(game_dir / "game_output.log", "w") as output:
+                self.process = subprocess.Popen(
+                    args,
+                    env=env,
+                    cwd=game_dir,
+                    stdin=subprocess.DEVNULL,
+                    stdout=output,
+                    stderr=subprocess.STDOUT,
+                )
 
-        print("Waiting for game to connect...")
-        self.wait_for_state(StateType.READY, timeout_ms=60000)
+            print("Waiting for game to connect...")
+            try:
+                self.wait_for_state(StateType.READY, timeout_ms=60000)
+                break
+            except GameTimeoutError:
+                if attempt == self.LAUNCH_ATTEMPTS:
+                    raise
+                print(
+                    f"Instance {self.id} did not start "
+                    f"(attempt {attempt}/{self.LAUNCH_ATTEMPTS}), relaunching..."
+                )
+                self._stop_game()
         print("Game reconnected!")
 
     def close(self):
         if self in _active_instances:
             _active_instances.remove(self)
 
-        if self.process is not None:
-            try:
-                self.process.terminate()
-                self.process.wait(timeout=5)
-            except Exception:
-                try:
-                    self.process.kill()
-                except Exception:
-                    pass
-            self.process = None
+        self._stop_game()
 
         if hasattr(self, "shm") and self.shm is not None:
             try:

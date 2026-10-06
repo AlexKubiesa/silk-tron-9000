@@ -28,6 +28,9 @@ from silk_tron.networks import (
 
 _next_env_id = 1
 
+# Threads used by PyTorch in the main process, for policy inference and PPO updates.
+TORCH_NUM_THREADS = 4
+
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -278,6 +281,9 @@ def train(
     pi_layers: list[int] | None = None,
     vf_layers: list[int] | None = None,
 ):
+    # The networks are small, so more threads mostly compete with the game instances for CPU.
+    torch.set_num_threads(TORCH_NUM_THREADS)
+
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
     # Set default handicaps if not provided
@@ -349,6 +355,7 @@ def train(
             seed=seed,
             device=str(device),
             dummy_env=dummy_env,
+            n_envs=n_envs,
             boss_damage_coef=boss_damage_coef,
             boss_defeat_coef=boss_defeat_coef,
             player_damage_coef=player_damage_coef,
@@ -631,7 +638,9 @@ if __name__ == "__main__":
         help="Path to checkpoint to resume training or evaluate",
     )
     parser.add_argument(
-        "--n-envs", type=int, default=1, help="Number of parallel environments"
+        "--n-envs",
+        type=int,
+        help="Number of parallel environments (overrides n_envs in the config, default 1)",
     )
     parser.add_argument(
         "--experiments-dir",
@@ -709,7 +718,7 @@ if __name__ == "__main__":
             no_fx=config.get("no_fx", True),
             seed=config.get("seed"),
             dummy_env=False,
-            n_envs=args.n_envs,
+            n_envs=args.n_envs or config.get("n_envs", 1),
             boss_damage_coef=config.get("boss_damage_coef", 1.0),
             boss_defeat_coef=config.get("boss_defeat_coef", 0.0),
             player_damage_coef=config.get("player_damage_coef", 0.1),
