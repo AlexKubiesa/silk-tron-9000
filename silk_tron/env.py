@@ -1,4 +1,5 @@
 from collections import defaultdict
+import time
 from typing import Optional
 import gymnasium as gym
 from gymnasium import spaces
@@ -28,6 +29,9 @@ def min_max_normalize(value: float, min_value: float, max_value: float) -> float
 
 
 class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
+    # Gaps between steps longer than this are PPO updates or resets, not per-step overhead.
+    MAX_AGENT_GAP_S = 0.5
+
     def __init__(
         self,
         boss: str,
@@ -130,23 +134,34 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         # Action tracking
         self.action_counts = {name: 0 for name in self.action_names}
 
+        # Per-step timing, in seconds
+        self.step_timings = defaultdict(list)
+
         observation = self._make_observation(game_state)
         reward, reward_components = self._default_reward()
         info = self._get_info(game_state, reward_components)
 
+        self.last_step_end_s = time.perf_counter()
         return observation, info
 
     def step(self, action):
+        step_start_s = time.perf_counter()
+        agent_gap_s = step_start_s - self.last_step_end_s
+        if agent_gap_s < self.MAX_AGENT_GAP_S:
+            self.step_timings["agent"].append(agent_gap_s)
+
         # Track actions
         self._track_actions(action)
 
         binary_action = self._convert_to_binary(action)
 
+        game_start_s = time.perf_counter()
         try:
             game_state = self.shm.step(binary_action)  # type: ignore
         except GameTimeoutError as e:
             print(f"[Env] {e}")
             return self._handle_timeout()
+        game_end_s = time.perf_counter()
 
         self.game_state = game_state
         self.total_steps += 1
@@ -172,6 +187,13 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.prev_boss_health = game_state.boss_health
         self.prev_player_health = game_state.player_health
         self.prev_player_silk = game_state.player_silk
+
+        step_end_s = time.perf_counter()
+        self.step_timings["game"].append(game_end_s - game_start_s)
+        self.step_timings["env"].append(
+            (game_start_s - step_start_s) + (step_end_s - game_end_s)
+        )
+        self.last_step_end_s = step_end_s
 
         info = self._get_info(game_state, reward_components, terminated or truncated)
 
@@ -388,6 +410,11 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
             info["hurt_count"] = self.hurt_count
             info["action_counts"] = self.action_counts.copy()
             info["is_success"] = self._is_success(game_state)
+            info["timing_ms"] = {
+                name: 1000.0 * float(np.mean(vals))
+                for name, vals in self.step_timings.items()
+                if vals
+            }
 
         return info
 

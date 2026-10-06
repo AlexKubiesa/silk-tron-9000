@@ -4,6 +4,7 @@ from enum import IntEnum
 from multiprocessing import shared_memory
 import os
 from pathlib import Path
+import select
 import shutil
 import signal
 import struct
@@ -266,8 +267,39 @@ class SilkSongSharedMemory:
         )
         self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
         logging.info(f"Created shared memory: {shm_name}")
+
+        # Doorbells: named pipes that carry wake-up bytes, so each side can block until the
+        # other has written to shared memory instead of polling. The game opens them by
+        # deriving the same paths from its instance ID.
+        self.command_doorbell_path = Path("/dev/shm") / f"{shm_name}_to_game"
+        self.state_doorbell_path = Path("/dev/shm") / f"{shm_name}_to_py"
+        self.command_doorbell_fd = self._create_doorbell(self.command_doorbell_path)
+        self.state_doorbell_fd = self._create_doorbell(self.state_doorbell_path)
+
         self._start_game()
         _active_instances.append(self)
+
+    @staticmethod
+    def _create_doorbell(path: Path) -> int:
+        path.unlink(missing_ok=True)
+        os.mkfifo(path)
+        # O_RDWR keeps the open from blocking until the game connects, and means reads
+        # never see EOF if the game exits.
+        return os.open(path, os.O_RDWR | os.O_NONBLOCK)
+
+    def _ring_command_doorbell(self):
+        try:
+            os.write(self.command_doorbell_fd, b"\x01")
+        except BlockingIOError:
+            # Pipe is full, so the game already has wake-ups pending.
+            pass
+
+    def _drain_state_doorbell(self):
+        try:
+            while os.read(self.state_doorbell_fd, 4096):
+                pass
+        except BlockingIOError:
+            pass
 
     def read_state(self) -> StateType:
         return struct.unpack_from("i", self.shm.buf, offset=self.STATE_OFFSET)[0]  # type: ignore
@@ -343,15 +375,17 @@ class SilkSongSharedMemory:
         struct.pack_into("B", self.shm.buf, offset + 12, 1 if skill else 0)  # type: ignore
         struct.pack_into("B", self.shm.buf, offset + 13, 1 if heal else 0)  # type: ignore
         struct.pack_into("i", self.shm.buf, offset + 14, 1)  # type: ignore
+        self._ring_command_doorbell()
 
     def wait_for_state(self, state_type: StateType, timeout_ms: int | None = None):
         if timeout_ms is None:
             timeout_ms = self.timeout_ms
 
-        deadline_s = time.monotonic() + timeout_ms / 1000.0
-        poll_interval_s = 0.005
+        deadline_s = time.perf_counter() + timeout_ms / 1000.0
 
         while True:
+            # The doorbell only wakes us up; the state in shared memory is authoritative,
+            # so stale or extra rings just cause another check.
             current_state = self.read_state()
             if current_state == state_type:
                 struct.pack_into(
@@ -359,13 +393,15 @@ class SilkSongSharedMemory:
                 )
                 break
 
-            if time.monotonic() >= deadline_s:
+            remaining_s = deadline_s - time.perf_counter()
+            if remaining_s <= 0:
                 raise GameTimeoutError(
                     f"Game did not respond within {timeout_ms}ms. "
                     f"Expected state: {state_type.name}, current state: {StateType(current_state).name}"
                 )
 
-            time.sleep(poll_interval_s)
+            select.select([self.state_doorbell_fd], [], [], remaining_s)
+            self._drain_state_doorbell()
 
     def reset(self) -> GameState:
         self.send_command(CommandType.RESET)
@@ -502,3 +538,15 @@ class SilkSongSharedMemory:
             except Exception:
                 pass
             self.shm = None
+
+        for fd_attr, path_attr in (
+            ("command_doorbell_fd", "command_doorbell_path"),
+            ("state_doorbell_fd", "state_doorbell_path"),
+        ):
+            if getattr(self, fd_attr, None) is not None:
+                try:
+                    os.close(getattr(self, fd_attr))
+                    getattr(self, path_attr).unlink(missing_ok=True)
+                except Exception:
+                    pass
+                setattr(self, fd_attr, None)

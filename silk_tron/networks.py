@@ -127,6 +127,7 @@ class TensorboardCallback(BaseCallback):
         self.lowest_boss_hps = deque(maxlen=buffer_size)
         self.reward_components = defaultdict(partial(deque, maxlen=buffer_size))
         self.action_proportions = defaultdict(partial(deque, maxlen=buffer_size))
+        self.step_timings_ms = defaultdict(partial(deque, maxlen=buffer_size))
 
     def _on_step(self) -> bool:
         for i, info in enumerate(self.locals.get("infos", [])):
@@ -160,6 +161,9 @@ class TensorboardCallback(BaseCallback):
                         proportion = count / total_steps
                         self.action_proportions[action_name].append(proportion)
 
+                for name, val in info.get("timing_ms", {}).items():
+                    self.step_timings_ms[name].append(val)
+
             if (ep_info := info.get("episode")) is not None:
                 if (reward_components := ep_info.get("reward_components")) is not None:
                     for name, val in reward_components.items():
@@ -175,6 +179,10 @@ class TensorboardCallback(BaseCallback):
                 self.logger.record(
                     f"actions/proportion_{action_name}", np.mean(proportions)
                 )
+
+        # Log mean per-step timings
+        for name, vals in self.step_timings_ms.items():
+            self.logger.record(f"timing/{name}_ms", np.mean(vals))
 
         return True
 

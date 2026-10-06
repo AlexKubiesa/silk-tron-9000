@@ -84,9 +84,15 @@ public class SharedMemoryManager : MonoBehaviour
     private const int GameStateOffset = 4;
     private const int CommandOffset = 1024;
 
+    // While idle in step mode, block for at most this long waiting for a command, so the
+    // game stays responsive while Python is busy (e.g. during PPO updates).
+    private const int CommandWaitTimeoutMs = 100;
+
     private MemoryMappedFile memoryMappedFile;
     private MemoryMappedViewAccessor accessor;
     private CommandData commandData;
+    private Doorbell commandDoorbell;
+    private Doorbell stateDoorbell;
 
     private string GetMemoryPath()
     {
@@ -114,6 +120,12 @@ public class SharedMemoryManager : MonoBehaviour
         string memoryPath = GetMemoryPath();
         memoryMappedFile = MemoryMappedFile.CreateFromFile(memoryPath);
         accessor = memoryMappedFile.CreateViewAccessor();
+
+        if (!CommandLineArgs.Manual)
+        {
+            commandDoorbell = Doorbell.Open($"{memoryPath}_to_game");
+            stateDoorbell = Doorbell.Open($"{memoryPath}_to_py");
+        }
     }
 
     public void WriteState(StateType state)
@@ -126,6 +138,8 @@ public class SharedMemoryManager : MonoBehaviour
         {
             Plugin.Logger.LogError($"Error writing state: {e.Message}");
         }
+
+        stateDoorbell?.Ring();
     }
 
     public void WriteGameState()
@@ -221,7 +235,23 @@ public class SharedMemoryManager : MonoBehaviour
             return;
 
         ReadCommand();
+
+        if (commandData.commandReady != 1 && commandDoorbell != null && IsWaitingForCommand())
+        {
+            // Block until Python rings instead of spinning through empty frames.
+            if (commandDoorbell.Wait(CommandWaitTimeoutMs))
+            {
+                ReadCommand();
+            }
+        }
+
         ProcessCommand();
+    }
+
+    private static bool IsWaitingForCommand()
+    {
+        var stepModeManager = StepModeManager.Instance;
+        return stepModeManager != null && stepModeManager.IsEnabled && !stepModeManager.IsSteppingFrame;
     }
 
 
@@ -229,5 +259,7 @@ public class SharedMemoryManager : MonoBehaviour
     {
         accessor?.Dispose();
         memoryMappedFile?.Dispose();
+        commandDoorbell?.Dispose();
+        stateDoorbell?.Dispose();
     }
 }
