@@ -25,12 +25,17 @@ public class StepModeManager : MonoBehaviour
             return;
 
         isEnabled = true;
+        // Advance game time by exactly one step's worth per frame, however long the frame took
+        // in real time. Otherwise time spent waiting for Python leaks into the next step, so
+        // steps get longer whenever the trainer is slow (e.g. with many instances).
+        Time.captureDeltaTime = Time.fixedDeltaTime * Constants.FramesPerStep;
         Time.timeScale = 0f;
     }
 
     public void DisableStepMode()
     {
         isEnabled = false;
+        Time.captureDeltaTime = 0f;
         Time.timeScale = CommandLineArgs.TimeScale;
     }
 
@@ -38,7 +43,8 @@ public class StepModeManager : MonoBehaviour
     {
         Plugin.Logger.LogDebug("Stepping one frame");
         isSteppingFrame = true;
-        Time.timeScale = CommandLineArgs.TimeScale;
+        // With captureDeltaTime set, a time scale of 1 advances exactly FramesPerStep fixed updates.
+        Time.timeScale = 1f;
 
         for (int i = 0; i < Constants.FramesPerStep; i++)
         {

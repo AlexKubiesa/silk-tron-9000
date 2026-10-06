@@ -261,11 +261,23 @@ class SilkSongSharedMemory:
 
         shm_name = f"{self.MEMORY_NAME}_{id}"
 
-        self.shm = shared_memory.SharedMemory(
-            name=shm_name,
-            create=True,
-            size=self.MEMORY_SIZE,
-        )
+        try:
+            self.shm = shared_memory.SharedMemory(
+                name=shm_name,
+                create=True,
+                size=self.MEMORY_SIZE,
+            )
+        except FileExistsError:
+            # Left behind by a run that was killed before it could clean up.
+            print(f"Removing stale shared memory: {shm_name}")
+            stale = shared_memory.SharedMemory(name=shm_name)
+            stale.close()
+            stale.unlink()
+            self.shm = shared_memory.SharedMemory(
+                name=shm_name,
+                create=True,
+                size=self.MEMORY_SIZE,
+            )
         self.shm.buf[:] = bytes(self.MEMORY_SIZE)  # type: ignore
         logging.info(f"Created shared memory: {shm_name}")
 
@@ -277,8 +289,9 @@ class SilkSongSharedMemory:
         self.command_doorbell_fd = self._create_doorbell(self.command_doorbell_path)
         self.state_doorbell_fd = self._create_doorbell(self.state_doorbell_path)
 
-        self._start_game()
+        # Register before launching, so an interrupt during startup still cleans up.
         _active_instances.append(self)
+        self._start_game()
 
     @staticmethod
     def _create_doorbell(path: Path) -> int:
