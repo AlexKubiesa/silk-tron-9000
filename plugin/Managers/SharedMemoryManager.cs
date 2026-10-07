@@ -245,6 +245,14 @@ public class SharedMemoryManager : MonoBehaviour
             }
         }
 
+        if (commandData.commandReady == 1)
+        {
+            // Consume this command's ring too, even if it arrived before we waited. Otherwise the
+            // next Wait returns on the stale ring before the next command exists, and the game runs
+            // an extra idle frame - so frames per step would depend on how fast the trainer is.
+            commandDoorbell?.Drain();
+        }
+
         ProcessCommand();
     }
 

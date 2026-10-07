@@ -26,6 +26,7 @@ public class Plugin : BaseUnityPlugin
 
         _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         _harmony.PatchAll();
+        RealtimePatcher.Apply(_harmony);
 
         var stepModeManager = new GameObject("StepModeManager");
         DontDestroyOnLoad(stepModeManager);

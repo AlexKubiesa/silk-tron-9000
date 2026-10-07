@@ -81,10 +81,18 @@ public class Doorbell : IDisposable
             return false;
         }
 
+        Drain();
+        return true;
+    }
+
+    /// <summary>
+    /// Discards pending rings without blocking.
+    /// </summary>
+    public void Drain()
+    {
         while ((long)read(fd, drainBuffer, (IntPtr)drainBuffer.Length) > 0)
         {
         }
-        return true;
     }
 
     public void Dispose()

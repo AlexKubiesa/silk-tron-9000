@@ -19,6 +19,11 @@ public class StepModeManager : MonoBehaviour
         Instance = this;
     }
 
+    private void Update()
+    {
+        StepClock.Sync();
+    }
+
     public void EnableStepMode()
     {
         if (CommandLineArgs.Manual)
