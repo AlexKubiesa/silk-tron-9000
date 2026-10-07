@@ -4,10 +4,11 @@
 boss: MossMother
 
 # Training configuration
-total_timesteps: 100000
+total_timesteps: 300000
 time_scale: 8.0
 no_fx: true
-seed: 123  # null means random seed
+seed: 123 # null means random seed
+n_envs: 4 # each game instance uses ~2 GB RAM
 
 # Handicap system
 handicaps:
@@ -26,7 +27,7 @@ handicaps:
 
 # PPO hyperparameters
 learning_rate: 0.0009654400943128438
-n_steps: 2048
+n_steps: 512 # per env; rollout size is n_steps * n_envs
 batch_size: 512
 n_epochs: 4
 gamma: 0.99
