@@ -5,6 +5,7 @@ from multiprocessing import shared_memory
 import os
 from pathlib import Path
 import select
+import shlex
 import shutil
 import signal
 import struct
@@ -124,6 +125,7 @@ class SilkSongSharedMemory:
 
     DEFAULT_TIMEOUT_MS = 30000
     LAUNCH_ATTEMPTS = 3
+    JOB_WORKER_COUNT = 2
 
     @staticmethod
     def _create_symlink(link_path: Path, target_path: Path):
@@ -513,6 +515,12 @@ class SilkSongSharedMemory:
         args.extend(["--player-max-silk", str(self.player_max_silk)])
         args.extend(["--player-needle-upgrades", str(self.player_needle_upgrades)])
         args.extend(["--player-silk-hearts", str(self.player_silk_hearts)])
+
+        # Unity starts a job worker thread per core by default. With several instances they only
+        # compete with each other, and 2 per instance was ~13% faster than the default with 4.
+        args.extend(["-job-worker-count", str(self.JOB_WORKER_COUNT)])
+        # Extra Unity player arguments, for experiments. Later flags override the defaults above.
+        args.extend(shlex.split(os.environ.get("SILKTRON_EXTRA_GAME_ARGS", "")))
 
         print(f"Launching game from: {game_path}")
 

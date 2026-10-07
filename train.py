@@ -23,16 +23,36 @@ from silk_tron.networks import (
     MultiHeadFeatureExtractor,
     TensorboardCallback,
     CustomCheckpointCallback,
+    TorchThreadsCallback,
 )
 
 
 _next_env_id = 1
 
-# Threads used by PyTorch in the main process, for policy inference and PPO updates.
+# Threads used by PyTorch in the main process for PPO updates. Rollouts use a single thread.
 TORCH_NUM_THREADS = 4
 
 
 load_dotenv(Path(__file__).parent / ".env")
+
+
+def pin_to_performance_cores():
+    """Restricts this process, and the game instances it launches, to the P-cores.
+
+    On hybrid Intel CPUs the scheduler otherwise places the latency-sensitive trainer and games
+    on slow E-cores, which cost 20-30% of throughput in a 4-instance run. Does nothing on
+    other CPUs.
+    """
+    try:
+        cpus = Path("/sys/devices/cpu_core/cpus").read_text().strip()
+        cpu_set = set()
+        for part in cpus.split(","):
+            low, _, high = part.partition("-")
+            cpu_set.update(range(int(low), int(high or low) + 1))
+        os.sched_setaffinity(0, cpu_set)
+        print(f"Pinned to performance cores: {cpus}")
+    except (OSError, ValueError):
+        pass
 
 
 def reset_env_id_counter():
@@ -283,6 +303,9 @@ def train(
 ):
     # The networks are small, so more threads mostly compete with the game instances for CPU.
     torch.set_num_threads(TORCH_NUM_THREADS)
+    # Skips input validation on every action distribution, which is a third of inference time.
+    torch.distributions.Distribution.set_default_validate_args(False)
+    pin_to_performance_cores()
 
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
@@ -485,7 +508,11 @@ def train(
     try:
         model.learn(
             total_timesteps=total_timesteps,
-            callback=[checkpoint_callback, tensorboard_callback],
+            callback=[
+                checkpoint_callback,
+                tensorboard_callback,
+                TorchThreadsCallback(TORCH_NUM_THREADS),
+            ],
             progress_bar=True,
             reset_num_timesteps=not resuming,
         )

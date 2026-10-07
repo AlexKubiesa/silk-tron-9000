@@ -187,6 +187,27 @@ class TensorboardCallback(BaseCallback):
         return True
 
 
+class TorchThreadsCallback(BaseCallback):
+    """Uses one PyTorch thread while collecting rollouts and more for PPO updates.
+
+    Inference is tiny batches of small ops, where multi-threading only adds latency, while the
+    update works on larger minibatches that do benefit.
+    """
+
+    def __init__(self, update_threads: int):
+        super().__init__()
+        self.update_threads = update_threads
+
+    def _on_rollout_start(self) -> None:
+        torch.set_num_threads(1)
+
+    def _on_rollout_end(self) -> None:
+        torch.set_num_threads(self.update_threads)
+
+    def _on_step(self) -> bool:
+        return True
+
+
 class CustomCheckpointCallback(CheckpointCallback):
     """Extended checkpoint callback that also saves RNG states."""
 
