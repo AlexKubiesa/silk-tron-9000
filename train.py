@@ -7,6 +7,7 @@ from typing import Union
 import numpy as np
 from sb3_contrib import MaskablePPO
 from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.utils import get_linear_fn
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 import torch
 from torch import nn
@@ -23,6 +24,7 @@ from silk_tron.networks import (
     MultiHeadFeatureExtractor,
     TensorboardCallback,
     CustomCheckpointCallback,
+    EntropyCoefScheduleCallback,
     TorchThreadsCallback,
 )
 
@@ -300,6 +302,9 @@ def train(
     features_dim: int = 256,
     pi_layers: list[int] | None = None,
     vf_layers: list[int] | None = None,
+    learning_rate_final: float | None = None,
+    target_kl: float | None = None,
+    ent_coef_final: float | None = None,
 ):
     # The networks are small, so more threads mostly compete with the game instances for CPU.
     torch.set_num_threads(TORCH_NUM_THREADS)
@@ -364,6 +369,7 @@ def train(
             config_path,
             total_timesteps=total_timesteps,
             learning_rate=learning_rate,
+            learning_rate_final=learning_rate_final,
             n_steps=n_steps,
             batch_size=batch_size,
             n_epochs=n_epochs,
@@ -371,6 +377,8 @@ def train(
             gae_lambda=gae_lambda,
             clip_range=clip_range,
             ent_coef=ent_coef,
+            ent_coef_final=ent_coef_final,
+            target_kl=target_kl,
             vf_coef=vf_coef,
             max_grad_norm=max_grad_norm,
             time_scale=time_scale,
@@ -428,6 +436,13 @@ def train(
     if vf_layers is None:
         vf_layers = [128]
 
+    # Linear decay from learning_rate to learning_rate_final over total_timesteps
+    lr_schedule = (
+        get_linear_fn(learning_rate, learning_rate_final, 1.0)
+        if learning_rate_final is not None
+        else learning_rate
+    )
+
     policy_kwargs = dict(
         features_extractor_class=MultiHeadFeatureExtractor,
         features_extractor_kwargs=dict(features_dim=features_dim),
@@ -440,7 +455,7 @@ def train(
         model = MaskablePPO.load(
             checkpoint_path,  # type: ignore
             env=env,
-            learning_rate=learning_rate,
+            learning_rate=lr_schedule,
             n_steps=n_steps,
             batch_size=batch_size,
             n_epochs=n_epochs,
@@ -450,6 +465,7 @@ def train(
             ent_coef=ent_coef,
             vf_coef=vf_coef,
             max_grad_norm=max_grad_norm,
+            target_kl=target_kl,
             verbose=1,
             tensorboard_log=log_dir,
             device=device,
@@ -459,7 +475,7 @@ def train(
         model = MaskablePPO(
             policy="MlpPolicy",
             env=env,
-            learning_rate=learning_rate,
+            learning_rate=lr_schedule,
             n_steps=n_steps,
             batch_size=batch_size,
             n_epochs=n_epochs,
@@ -469,6 +485,7 @@ def train(
             ent_coef=ent_coef,
             vf_coef=vf_coef,
             max_grad_norm=max_grad_norm,
+            target_kl=target_kl,
             verbose=1,
             tensorboard_log=log_dir,
             device=device,
@@ -499,6 +516,13 @@ def train(
         save_vecnormalize=True,
     )
     tensorboard_callback = TensorboardCallback()
+    callbacks = [
+        checkpoint_callback,
+        tensorboard_callback,
+        TorchThreadsCallback(TORCH_NUM_THREADS),
+    ]
+    if ent_coef_final is not None:
+        callbacks.append(EntropyCoefScheduleCallback(ent_coef, ent_coef_final))
 
     print("\n" + "=" * 60)
     print("Starting training...")
@@ -508,11 +532,7 @@ def train(
     try:
         model.learn(
             total_timesteps=total_timesteps,
-            callback=[
-                checkpoint_callback,
-                tensorboard_callback,
-                TorchThreadsCallback(TORCH_NUM_THREADS),
-            ],
+            callback=callbacks,
             progress_bar=True,
             reset_num_timesteps=not resuming,
         )
@@ -759,4 +779,7 @@ if __name__ == "__main__":
             features_dim=features_dim,
             pi_layers=pi_layers,
             vf_layers=vf_layers,
+            learning_rate_final=config.get("learning_rate_final"),
+            target_kl=config.get("target_kl"),
+            ent_coef_final=config.get("ent_coef_final"),
         )

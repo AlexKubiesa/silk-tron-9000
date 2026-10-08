@@ -208,6 +208,25 @@ class TorchThreadsCallback(BaseCallback):
         return True
 
 
+class EntropyCoefScheduleCallback(BaseCallback):
+    """Linearly decays the entropy coefficient from `initial` to `final` over training."""
+
+    def __init__(self, initial: float, final: float):
+        super().__init__()
+        self.initial = initial
+        self.final = final
+
+    def _on_rollout_start(self) -> None:
+        progress_remaining = self.model._current_progress_remaining
+        self.model.ent_coef = (
+            self.final + (self.initial - self.final) * progress_remaining
+        )
+        self.logger.record("train/ent_coef", self.model.ent_coef)
+
+    def _on_step(self) -> bool:
+        return True
+
+
 class CustomCheckpointCallback(CheckpointCallback):
     """Extended checkpoint callback that also saves RNG states."""
 
