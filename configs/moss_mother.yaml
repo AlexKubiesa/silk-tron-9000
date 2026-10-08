@@ -33,7 +33,7 @@ n_epochs: 4
 gamma: 0.99
 gae_lambda: 0.95
 clip_range: 0.1
-ent_coef: 0.03388623559819072
+ent_coef: 0.01
 vf_coef: 0.4424364893339975
 max_grad_norm: 0.3
 
