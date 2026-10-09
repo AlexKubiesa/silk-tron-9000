@@ -29,8 +29,8 @@ handicaps:
 learning_rate: 0.0004
 learning_rate_final: 0.00004 # linear decay over total_timesteps
 target_kl: 0.02 # stop the epoch loop early once KL exceeds 1.5x this
-n_steps: 512 # per env; rollout size is n_steps * n_envs
-batch_size: 512
+n_steps: 2048 # per env; rollout size is n_steps * n_envs
+batch_size: 1024
 n_epochs: 4
 gamma: 0.99
 gae_lambda: 0.95
