@@ -13,11 +13,13 @@ import torch
 from torch import nn
 from datetime import datetime
 import json
+import time
 import gymnasium as gym
 from torchinfo import summary
 import yaml
 
 
+from silk_tron.constants import STEP_DURATION_SECONDS
 from silk_tron.env import MyMonitor, SilksongBossEnv, DummySilksongBossEnv
 from silk_tron.handicaps import HandicapConfig
 from silk_tron.networks import (
@@ -180,6 +182,7 @@ def make_env(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     handicaps: HandicapConfig | None = None,
+    demo: bool = False,
 ) -> gym.Env:
     import torch
 
@@ -196,6 +199,7 @@ def make_env(
             env_id,
             time_scale=time_scale,
             no_fx=no_fx,
+            demo=demo,
             boss_damage_coef=boss_damage_coef,
             boss_defeat_coef=boss_defeat_coef,
             player_damage_coef=player_damage_coef,
@@ -578,11 +582,13 @@ def evaluate(
     time_penalty_coef: float = 0.0001,
     silk_coef: float = 0.0,
     handicaps: HandicapConfig | None = None,
+    demo: bool = False,
 ):
     if handicaps is None:
         handicaps = HandicapConfig()
 
     print(f"\nEvaluating model: {model_path}")
+    print(f"Demo (real-time pacing): {demo}")
     print(f"Time scale: {time_scale}")
     print(f"NoFx: {no_fx}")
 
@@ -594,6 +600,7 @@ def evaluate(
                 env_id=1,
                 time_scale=time_scale,
                 no_fx=no_fx,
+                demo=demo,
                 boss_damage_coef=boss_damage_coef,
                 boss_defeat_coef=boss_defeat_coef,
                 player_damage_coef=player_damage_coef,
@@ -627,15 +634,26 @@ def evaluate(
     episode_lengths = []
     episode_wins = []
 
+    obs = env.reset()
     for episode in range(n_episodes):
-        obs = env.reset()
+        # The vec env resets itself when an episode ends, so `obs` already starts the next one.
         done = False
         episode_reward = 0
         episode_length = 0
+        next_step_time = time.perf_counter()
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)  # type: ignore
             obs, reward, done, info = env.step(action)
+            if demo:
+                # Steps run as fast as the game renders, so sleep to hold 1 game second per
+                # real second. A fixed schedule avoids accumulating drift from the sleeps.
+                next_step_time += STEP_DURATION_SECONDS
+                delay = next_step_time - time.perf_counter()
+                if delay > 0:
+                    time.sleep(delay)
+                else:
+                    next_step_time = time.perf_counter()
             episode_reward += reward[0]
             episode_length += 1
 
@@ -700,6 +718,11 @@ if __name__ == "__main__":
         type=str,
         help="Custom name for this run (default: auto-generated with timestamp)",
     )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="With --eval, pace steps to real time (1 game second per real second)",
+    )
     args = parser.parse_args()
 
     # Load config
@@ -716,6 +739,9 @@ if __name__ == "__main__":
     # Load handicaps from config
     handicaps_dict = config.get("handicaps", {})
     handicaps = HandicapConfig(**handicaps_dict)
+
+    if args.demo and not args.eval:
+        parser.error("--demo requires --eval")
 
     if args.eval:
         if not args.checkpoint:
@@ -737,6 +763,7 @@ if __name__ == "__main__":
             time_penalty_coef=config.get("time_penalty_coef", 0.0001),
             silk_coef=config.get("silk_coef", 0.0),
             handicaps=handicaps,
+            demo=args.demo,
         )
     else:
         # Extract network architecture params

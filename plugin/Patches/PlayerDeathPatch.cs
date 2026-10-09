@@ -8,9 +8,11 @@ public class PlayerDeathPatch
 {
     [HarmonyPatch(typeof(HeroController), nameof(HeroController.Die))]
     [HarmonyPrefix]
-    private static bool HeroController_Die(ref IEnumerator __result)
+    private static bool HeroController_Die(HeroController __instance, ref IEnumerator __result)
     {
-        __result = EmptyCoroutine();
+        // In demo mode, show the death animation. GameManager.PlayerDead stays blocked either way:
+        // it saves the game and respawns the hero at a bench.
+        __result = CommandLineArgs.Demo ? DemoDeathPlayback.PlayerDeath(__instance) : EmptyCoroutine();
         return false;
     }
 

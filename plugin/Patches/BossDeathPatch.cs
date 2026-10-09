@@ -35,6 +35,14 @@ public class BossDeathPatch
     {
         if (instance == BossStateManager.CurrentBoss)
         {
+            if (CommandLineArgs.Demo)
+            {
+                // Let the boss die for real. The episode is then reset by reloading its scene.
+                Plugin.Logger.LogInfo("Boss death allowed (demo mode)");
+                DemoDeathPlayback.MarkBossDied();
+                return true;
+            }
+
             Plugin.Logger.LogInfo("Boss death blocked");
             return false;
         }

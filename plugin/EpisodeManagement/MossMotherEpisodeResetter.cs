@@ -11,6 +11,12 @@ public class MossMotherEpisodeResetter : EpisodeResetterBase
         Object.Destroy(GameObject.Find("Moss Vine Cluster (1)"));
     }
 
+    protected override void ResetPlayerData()
+    {
+        base.ResetPlayerData();
+        HeroController.instance.playerData.defeatedMossMother = false;
+    }
+
     protected override void ResetAllBossFsms(HealthManager boss)
     {
         base.ResetAllBossFsms(boss);

@@ -8,6 +8,7 @@ public static class CommandLineArgs
     public static float TimeScale { get; private set; } = 1.0f;
     public static bool Manual { get; private set; } = false;
     public static bool NoFx { get; private set; } = false;
+    public static bool Demo { get; private set; } = false;
     public static bool PlayerHasClawline { get; private set; } = true;
     public static bool PlayerHasClingGrip { get; private set; } = true;
     public static bool PlayerHasDash { get; private set; } = true;
@@ -52,6 +53,11 @@ public static class CommandLineArgs
             {
                 NoFx = true;
                 Plugin.Logger.LogInfo("Set NoFx mode to true");
+            }
+            else if (args[i] == "--demo")
+            {
+                Demo = true;
+                Plugin.Logger.LogInfo("Set Demo mode to true");
             }
             else if (args[i] == "--player-has-clawline" && i + 1 < args.Length)
             {

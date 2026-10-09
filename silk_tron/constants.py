@@ -5,6 +5,9 @@ BOSS_MAX_PHASE = 2
 
 MAX_EPISODE_STEPS = 2000
 
+# Game time per env step: Constants.FramesPerStep (2) * Time.fixedDeltaTime (0.02) in the plugin.
+STEP_DURATION_SECONDS = 0.04
+
 NUM_RAYS = 32
 NUM_HIT_TYPES = 6
 RAYCAST_DIM = NUM_RAYS * 2

@@ -1,3 +1,4 @@
+using System.Collections;
 using System;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
@@ -205,14 +206,7 @@ public class SharedMemoryManager : MonoBehaviour
                 break;
             case CommandType.Reset:
                 StepModeManager.Instance.DisableStepMode();
-                if (EpisodeResetter.IsInitialStateCaptured)
-                {
-                    GameManager.instance.StartCoroutine(EpisodeResetter.SoftResetEpisode());
-                }
-                else
-                {
-                    GameManager.instance.StartCoroutine(EpisodeResetter.ResetEpisode());
-                }
+                GameManager.instance.StartCoroutine(ResetEpisode());
                 break;
             case CommandType.None:
             default:
@@ -226,6 +220,27 @@ public class SharedMemoryManager : MonoBehaviour
         catch (Exception e)
         {
             Plugin.Logger.LogError($"Error resetting commandReady: {e.Message}");
+        }
+    }
+
+    private static IEnumerator ResetEpisode()
+    {
+        bool bossDied = false;
+        if (CommandLineArgs.Demo)
+        {
+            // Now that step mode is off the game runs in real time, so the death animations play.
+            yield return DemoDeathPlayback.PlayOut();
+            bossDied = DemoDeathPlayback.ConsumeDeaths();
+        }
+
+        // A boss that died for real can't be revived in place, so its scene is reloaded.
+        if (EpisodeResetter.IsInitialStateCaptured && !bossDied)
+        {
+            yield return EpisodeResetter.SoftResetEpisode();
+        }
+        else
+        {
+            yield return EpisodeResetter.ResetEpisode();
         }
     }
 

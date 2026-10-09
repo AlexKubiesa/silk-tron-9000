@@ -388,6 +388,11 @@ public class EpisodeResetterBase
             _bossInitialHp = CommandLineArgs.Boss.HP;
         }
 
+        if (CommandLineArgs.Demo)
+        {
+            ScenePersistence.CaptureOnce(CommandLineArgs.Boss.Scene);
+        }
+
         _initialStateCaptured = true;
     }
 
@@ -445,6 +450,13 @@ public class EpisodeResetterBase
         Plugin.IsReady = true;
         GameStateCollector.ResetEpisodeTime();
         ActionManager.ResetInputs();
+
+        if (CommandLineArgs.Demo)
+        {
+            // The hero's death sequence fades the screen to black, and the respawn that would
+            // normally fade it back in is skipped.
+            GameManager.instance.FadeSceneIn();
+        }
 
         StepModeManager.Instance.EnableStepMode();
 
@@ -1332,6 +1344,10 @@ public class EpisodeResetterBase
 
         ResetPlayerData();
 
+        // The boss may have died for real, and the game remembers that when it leaves the scene.
+        // Have that undone as it does (see DemoSceneStatePatch).
+        ScenePersistence.RestorePending = CommandLineArgs.Demo;
+
         var sceneInfo = new GameManager.SceneLoadInfo
         {
             SceneName = CommandLineArgs.Boss.Scene,
@@ -1364,6 +1380,8 @@ public class EpisodeResetterBase
 
             yield return new WaitForEndOfFrame();
         }
+
+        ScenePersistence.RestorePending = false;
 
         OnPlayerAcceptingInput();
 
