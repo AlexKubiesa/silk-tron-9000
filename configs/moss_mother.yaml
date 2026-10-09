@@ -4,7 +4,7 @@
 boss: MossMother
 
 # Training configuration
-total_timesteps: 1000000
+total_timesteps: 3000000
 time_scale: 8.0
 no_fx: true
 seed: 123 # null means random seed
@@ -27,6 +27,8 @@ handicaps:
 
 # PPO hyperparameters
 learning_rate: 0.0004
+learning_rate_final: 0.00004 # linear decay over total_timesteps
+target_kl: 0.02 # stop the epoch loop early once KL exceeds 1.5x this
 n_steps: 512 # per env; rollout size is n_steps * n_envs
 batch_size: 512
 n_epochs: 4
