@@ -4,12 +4,11 @@
 boss: Widow
 
 # Training configuration
-# A short run to check that resets and observations work. Raise total_timesteps for real training.
-total_timesteps: 10000
+total_timesteps: 1000000
 time_scale: 8.0
 no_fx: true
 seed: 123 # null means random seed
-n_envs: 1 # each game instance uses ~2 GB RAM
+n_envs: 4 # each game instance uses ~2 GB RAM
 
 # Handicap system
 handicaps:
