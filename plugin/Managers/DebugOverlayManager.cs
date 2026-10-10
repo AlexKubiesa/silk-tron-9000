@@ -224,6 +224,15 @@ public class DebugOverlayManager : MonoBehaviour
         var bossAnimState = BossAnimationMapper.GetById(state.bossAnimationState).ClipName;
         GUILayout.Label($"Animation: {bossAnimState}", animStyle);
         GUILayout.Label($"Progress: {state.bossAnimationProgress:P0}", animStyle);
+        GUILayout.Label($"Clip: {BossStateManager.GetCurrentClipName() ?? "none"}", animStyle);
+
+        if (BossStateManager.CurrentBoss != null)
+        {
+            foreach (var fsm in BossStateManager.CurrentBoss.GetComponents<PlayMakerFSM>())
+            {
+                GUILayout.Label($"FSM {fsm.FsmName}: {fsm.ActiveStateName}", animStyle);
+            }
+        }
 
         string bossFlags = state.bossFacingRight == 1 ? "RIGHT" : "LEFT";
         GUILayout.Label($"Facing: {bossFlags}", flagStyle);
@@ -249,6 +258,13 @@ public class DebugOverlayManager : MonoBehaviour
 
         GUILayout.Label("CONTROLS", headerStyle);
         GUILayout.Label("F1: Toggle UI | F2: Toggle Raycasts", labelStyle);
+        if (CommandLineArgs.Manual)
+        {
+            GUILayout.Label("F3: Scan boss | F4: Dump report | F5: Reset", labelStyle);
+            GUILayout.Label("F6: Jump to scene | F7: List gates", labelStyle);
+            GUILayout.Label("F8: Dump flags | F9: Apply flags", labelStyle);
+            GUILayout.Label("F10: Dump scene | F11/F12: Hard/soft reset", labelStyle);
+        }
 
         GUILayout.EndArea();
 

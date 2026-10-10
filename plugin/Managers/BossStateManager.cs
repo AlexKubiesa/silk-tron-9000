@@ -14,7 +14,7 @@ public static class BossStateManager
 
     public static int CurrentPhase => currentBossPhase;
 
-    public static void FindBoss()
+    public static void FindBoss(bool quiet = false)
     {
         var healthManagers = Object.FindObjectsByType<HealthManager>(FindObjectsSortMode.None);
         CurrentBoss = healthManagers
@@ -34,8 +34,24 @@ public static class BossStateManager
         {
             CurrentBossRb = null;
             CurrentBossFsm = null;
-            Plugin.Logger.LogWarning("No boss found in scene");
+            if (!quiet)
+            {
+                Plugin.Logger.LogWarning("No boss found in scene");
+            }
         }
+    }
+
+    /// <summary>The boss's current tk2d clip name as the game spells it, or null if it has none.</summary>
+    public static string GetCurrentClipName()
+    {
+        if (CurrentBoss == null)
+            return null;
+
+        var animator = CurrentBoss.GetComponent<tk2dSpriteAnimator>();
+        if (animator == null || animator.CurrentClip == null)
+            return null;
+
+        return animator.CurrentClip.name;
     }
 
     public static void ResetBoss()

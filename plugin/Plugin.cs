@@ -40,6 +40,13 @@ public class Plugin : BaseUnityPlugin
         DontDestroyOnLoad(debugOverlayManager);
         debugOverlayManager.AddComponent<DebugOverlayManager>();
 
+        if (CommandLineArgs.Manual)
+        {
+            var bossDiagnosticsManager = new GameObject("BossDiagnosticsManager");
+            DontDestroyOnLoad(bossDiagnosticsManager);
+            bossDiagnosticsManager.AddComponent<BossDiagnosticsManager>();
+        }
+
         if (CommandLineArgs.Boss.Name == "Lace")
         {
             // TODO: RefreshProjectileCache takes 2 ms per call. Make it more efficient.

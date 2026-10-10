@@ -59,6 +59,30 @@ public static class ScenePersistence
         }
     }
 
+    /// <summary>
+    /// Forgets one of a scene's persistent entries, which puts it back to its default.
+    /// Returns whether there was such an entry.
+    /// </summary>
+    public static bool RemoveEntry(string sceneName, string id)
+    {
+        var data = SceneData.instance;
+        return RemoveEntry(data.PersistentBools, sceneName, id) || RemoveEntry(data.PersistentInts, sceneName, id);
+    }
+
+    private static bool RemoveEntry<T, TContainer>(
+        SceneData.PersistentItemDataCollection<T, TContainer> collection, string sceneName, string id)
+        where TContainer : SceneData.SerializableItemData<T>, new()
+    {
+        var found = false;
+        collection.Mutate(item => found |= item.SceneName == sceneName && item.ID == id);
+        if (found)
+        {
+            collection.Remove(sceneName, id);
+        }
+
+        return found;
+    }
+
     private static Dictionary<string, T> Capture<T, TContainer>(
         SceneData.PersistentItemDataCollection<T, TContainer> collection, string sceneName)
         where TContainer : SceneData.SerializableItemData<T>, new()
