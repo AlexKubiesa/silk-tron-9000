@@ -2,7 +2,7 @@
 
 A reinforcement learning agent for Hollow Knight: Silksong.
 
-The boss fights currently supported are Moss Mother and the second Lace fight.
+The boss fights currently supported are Moss Mother, the second Lace fight and Widow (called Spinner in the game).
 
 ## Requirements
 

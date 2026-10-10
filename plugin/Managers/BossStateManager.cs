@@ -82,20 +82,18 @@ public static class BossStateManager
 
         lastTrackedFsmState = stateName;
 
-        if (currentBossPhase < 1)
-        {
-            if (stateName.StartsWith("P2 Shift"))
-            {
-                currentBossPhase = 1;
-            }
-        }
+        AdvancePhase(stateName);
+    }
 
-        if (currentBossPhase < 2)
-        {
-            if (stateName.StartsWith("P3 Roar"))
-            {
-                currentBossPhase = 2;
-            }
-        }
+    /// <summary>Called by <see cref="Patches.FsmStatePatch"/> each time the boss's FSM enters a state.</summary>
+    public static void OnStateEntered(string stateName)
+    {
+        AdvancePhase(stateName);
+        BossDiagnosticsManager.Instance?.RecordStateEntered(stateName);
+    }
+
+    private static void AdvancePhase(string stateName)
+    {
+        currentBossPhase = CommandLineArgs.Boss.Phases.Advance(currentBossPhase, stateName);
     }
 }

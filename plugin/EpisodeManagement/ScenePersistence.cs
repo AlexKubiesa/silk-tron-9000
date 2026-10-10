@@ -20,6 +20,12 @@ public static class ScenePersistence
     /// </summary>
     public static bool RestorePending { get; set; }
 
+    /// <summary>
+    /// Runs once the game has written the scene's state while leaving it (see <see cref="DemoSceneStatePatch"/>),
+    /// for changes to that state that the scene being left would otherwise undo.
+    /// </summary>
+    public static System.Action AfterLevelStateSaved { get; set; }
+
     /// <summary>Remembers the scene's current entries. Only the first call has an effect.</summary>
     public static void CaptureOnce(string sceneName)
     {

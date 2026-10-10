@@ -1,0 +1,57 @@
+# Hyperparameter configuration for Widow boss fight (called Spinner in the game)
+
+# Scenario
+boss: Widow
+
+# Training configuration
+# A short run to check that resets and observations work. Raise total_timesteps for real training.
+total_timesteps: 10000
+time_scale: 8.0
+no_fx: true
+seed: 123 # null means random seed
+n_envs: 1 # each game instance uses ~2 GB RAM
+
+# Handicap system
+handicaps:
+  has_clawline: false
+  has_cling_grip: true
+  has_dash: true
+  has_double_jump: false
+  has_drifters_cloak: true
+  has_needle_strike: false
+  has_silkspear: true
+  hunter_crest_version: 1
+  max_health: 6
+  max_silk: 10
+  needle_upgrades: 0
+  silk_hearts: 1
+
+# PPO hyperparameters, from moss_mother.yaml
+learning_rate: 0.0004
+learning_rate_final: 0.00004 # linear decay over total_timesteps
+target_kl: 0.02 # stop the epoch loop early once KL exceeds 1.5x this
+n_steps: 2048 # per env; rollout size is n_steps * n_envs
+batch_size: 512
+n_epochs: 4
+gamma: 0.99
+gae_lambda: 0.95
+clip_range: 0.1
+ent_coef: 0.01
+vf_coef: 0.5
+max_grad_norm: 0.3
+
+# Network architecture
+features_dim: 256
+pi_layers: [128]
+vf_layers: [128]
+
+# Reward configuration
+boss_damage_coef: 1.0
+boss_defeat_coef: 0.0
+player_damage_coef: 0.1
+too_far_coef: 0.001
+too_far_threshold: 15.0 # the arena is 30.6 wide, so this is about half of it
+too_close_coef: 0.001
+too_close_threshold: 1.0
+time_penalty_coef: 0.0001
+silk_coef: 0.0

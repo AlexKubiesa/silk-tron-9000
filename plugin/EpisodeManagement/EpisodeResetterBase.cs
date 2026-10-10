@@ -434,6 +434,7 @@ public class EpisodeResetterBase
             BossProjectileManager.Instance.ClearProjectileCache();
         }
         ClearActiveProjectiles();
+        ClearBossProjectiles();
 
         ResetStaticState();
 
@@ -749,7 +750,7 @@ public class EpisodeResetterBase
 
             boss.transform.position = _bossSpawnPosition;
 
-            boss.transform.localScale = new Vector3(-1f, 1f, 1f);
+            boss.transform.localScale = BossResetScale;
 
             if (BossStateManager.CurrentBossRb != null)
             {
@@ -1347,6 +1348,7 @@ public class EpisodeResetterBase
         // The boss may have died for real, and the game remembers that when it leaves the scene.
         // Have that undone as it does (see DemoSceneStatePatch).
         ScenePersistence.RestorePending = CommandLineArgs.Demo;
+        ScenePersistence.AfterLevelStateSaved = OnLevelStateSaved;
 
         var sceneInfo = new GameManager.SceneLoadInfo
         {
@@ -1382,6 +1384,7 @@ public class EpisodeResetterBase
         }
 
         ScenePersistence.RestorePending = false;
+        ScenePersistence.AfterLevelStateSaved = null;
 
         OnPlayerAcceptingInput();
 
@@ -1390,6 +1393,8 @@ public class EpisodeResetterBase
         yield return new WaitForEndOfFrame();
 
         BossStateManager.FindBoss();
+
+        yield return WaitForFightStart();
 
         CaptureInitialState();
 
@@ -1550,4 +1555,25 @@ public class EpisodeResetterBase
     }
 
     protected virtual void OnPlayerAcceptingInput() { }
+
+    /// <summary>
+    /// Runs in a hard reset when the game has just written the state of the scene being left. Changes to the scene's
+    /// persistent state belong here, because the scene being left would undo them if they were made earlier.
+    /// </summary>
+    protected virtual void OnLevelStateSaved() { }
+
+    /// <summary>
+    /// Runs in a hard reset once the boss has been found and before its state is captured. For a boss that
+    /// has to be woken up, so that what is captured is the start of the fight.
+    /// </summary>
+    protected virtual IEnumerator WaitForFightStart()
+    {
+        yield break;
+    }
+
+    /// <summary>Removes the boss's own projectiles in a soft reset, which <see cref="ClearActiveProjectiles"/> does not recognise.</summary>
+    protected virtual void ClearBossProjectiles() { }
+
+    /// <summary>The boss's local scale at the start of an episode, which sets the way it faces.</summary>
+    protected virtual Vector3 BossResetScale => new Vector3(-1f, 1f, 1f);
 }

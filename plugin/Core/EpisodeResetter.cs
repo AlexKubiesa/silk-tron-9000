@@ -23,6 +23,9 @@ public static class EpisodeResetter
             case "MossMother":
                 _instance = new MossMotherEpisodeResetter();
                 break;
+            case "Widow":
+                _instance = new WidowEpisodeResetter();
+                break;
             default:
                 throw new System.Exception($"No EpisodeResetter found for boss {CommandLineArgs.Boss.Name}");
         }

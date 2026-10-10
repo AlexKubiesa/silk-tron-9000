@@ -2,6 +2,7 @@
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using SilkTronPlugin.Patches;
 using UnityEngine;
 
 namespace SilkTronPlugin;
@@ -27,6 +28,7 @@ public class Plugin : BaseUnityPlugin
         _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         _harmony.PatchAll();
         RealtimePatcher.Apply(_harmony);
+        FsmStatePatch.Apply(_harmony);
 
         var stepModeManager = new GameObject("StepModeManager");
         DontDestroyOnLoad(stepModeManager);

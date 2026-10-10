@@ -34,4 +34,17 @@ BOSSES = {
         vel_x_range=(-20.0, 20.0),
         vel_y_range=(-22.0, 25.0),
     ),
+    # The arena was measured from the hero's position at its corners. Its floor is y=8.56, and 19.64 was the
+    # highest jump tried. The ceiling is estimated from the ceiling gate at y=24.9.
+    # The velocity ranges are the largest seen in one fight, -51.0 to 51.8 and -48.5 to 12.9, with a margin.
+    "Widow": Boss(
+        name="Widow",
+        max_hp=360,
+        arena_min_x=37.2,
+        arena_max_x=67.8,
+        arena_min_y=8.5,
+        arena_max_y=24.5,
+        vel_x_range=(-55.0, 55.0),
+        vel_y_range=(-52.0, 16.0),
+    ),
 }
