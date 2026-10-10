@@ -45,7 +45,7 @@ pi_layers: [128]
 vf_layers: [128]
 
 # Reward configuration
-boss_damage_coef: 1.0
+boss_damage_coef: 3.0 # a hit is worth about as much as for Moss Mother, whose max_hp is a third of the Widow's
 boss_defeat_coef: 0.0
 player_damage_coef: 0.1
 too_far_coef: 0.001
