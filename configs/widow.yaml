@@ -27,7 +27,8 @@ handicaps:
 
 # PPO hyperparameters, from moss_mother.yaml
 learning_rate: 0.0004
-learning_rate_final: 0.00004 # linear decay over total_timesteps
+learning_rate_final: 0.00004
+lr_decay_steps: 3000000 # linear decay over this many steps, then constant; null decays over total_timesteps
 target_kl: 0.02 # stop the epoch loop early once KL exceeds 1.5x this
 n_steps: 2048 # per env; rollout size is n_steps * n_envs
 batch_size: 1024
@@ -36,7 +37,8 @@ gamma: 0.99
 gae_lambda: 0.95
 clip_range: 0.1
 ent_coef: 0.01
-ent_coef_final: 0.001 # linear decay over total_timesteps
+ent_coef_final: 0.001
+ent_decay_steps: 3000000 # as lr_decay_steps
 vf_coef: 0.5
 max_grad_norm: 0.3
 

@@ -27,6 +27,7 @@ from silk_tron.networks import (
     TensorboardCallback,
     CustomCheckpointCallback,
     EntropyCoefScheduleCallback,
+    LearningRateScheduleCallback,
     TorchThreadsCallback,
 )
 
@@ -309,12 +310,19 @@ def train(
     learning_rate_final: float | None = None,
     target_kl: float | None = None,
     ent_coef_final: float | None = None,
+    lr_decay_steps: int | None = None,
+    ent_decay_steps: int | None = None,
 ):
     # The networks are small, so more threads mostly compete with the game instances for CPU.
     torch.set_num_threads(TORCH_NUM_THREADS)
     # Skips input validation on every action distribution, which is a third of inference time.
     torch.distributions.Distribution.set_default_validate_args(False)
     pin_to_performance_cores()
+
+    if lr_decay_steps is not None and learning_rate_final is None:
+        raise ValueError("lr_decay_steps requires learning_rate_final")
+    if ent_decay_steps is not None and ent_coef_final is None:
+        raise ValueError("ent_decay_steps requires ent_coef_final")
 
     resuming = checkpoint_path and os.path.exists(checkpoint_path)
 
@@ -374,6 +382,7 @@ def train(
             total_timesteps=total_timesteps,
             learning_rate=learning_rate,
             learning_rate_final=learning_rate_final,
+            lr_decay_steps=lr_decay_steps,
             n_steps=n_steps,
             batch_size=batch_size,
             n_epochs=n_epochs,
@@ -382,6 +391,7 @@ def train(
             clip_range=clip_range,
             ent_coef=ent_coef,
             ent_coef_final=ent_coef_final,
+            ent_decay_steps=ent_decay_steps,
             target_kl=target_kl,
             vf_coef=vf_coef,
             max_grad_norm=max_grad_norm,
@@ -440,10 +450,11 @@ def train(
     if vf_layers is None:
         vf_layers = [128]
 
-    # Linear decay from learning_rate to learning_rate_final over total_timesteps
+    # Linear decay from learning_rate to learning_rate_final over lr_decay_steps, which
+    # LearningRateScheduleCallback applies. Without it, over total_timesteps.
     lr_schedule = (
         get_linear_fn(learning_rate, learning_rate_final, 1.0)
-        if learning_rate_final is not None
+        if learning_rate_final is not None and lr_decay_steps is None
         else learning_rate
     )
 
@@ -525,8 +536,17 @@ def train(
         tensorboard_callback,
         TorchThreadsCallback(TORCH_NUM_THREADS),
     ]
+    if lr_decay_steps is not None:
+        assert learning_rate_final is not None
+        callbacks.append(
+            LearningRateScheduleCallback(
+                learning_rate, learning_rate_final, lr_decay_steps
+            )
+        )
     if ent_coef_final is not None:
-        callbacks.append(EntropyCoefScheduleCallback(ent_coef, ent_coef_final))
+        callbacks.append(
+            EntropyCoefScheduleCallback(ent_coef, ent_coef_final, ent_decay_steps)
+        )
 
     print("\n" + "=" * 60)
     print("Starting training...")
@@ -809,4 +829,6 @@ if __name__ == "__main__":
             learning_rate_final=config.get("learning_rate_final"),
             target_kl=config.get("target_kl"),
             ent_coef_final=config.get("ent_coef_final"),
+            lr_decay_steps=config.get("lr_decay_steps"),
+            ent_decay_steps=config.get("ent_decay_steps"),
         )

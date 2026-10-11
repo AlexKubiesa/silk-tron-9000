@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
+from stable_baselines3.common.utils import ConstantSchedule
 
 from silk_tron.constants import (
     STATE_DIM,
@@ -208,19 +209,58 @@ class TorchThreadsCallback(BaseCallback):
         return True
 
 
-class EntropyCoefScheduleCallback(BaseCallback):
-    """Linearly decays the entropy coefficient from `initial` to `final` over training."""
+def linear_decay(initial: float, final: float, decay_steps: int, steps: int) -> float:
+    """Linear from `initial` to `final` over `decay_steps`, then constant at `final`."""
+    return initial + (final - initial) * min(steps / decay_steps, 1.0)
 
-    def __init__(self, initial: float, final: float):
+
+class LearningRateScheduleCallback(BaseCallback):
+    """Decays the learning rate from `initial` to `final` over `decay_steps` timesteps.
+
+    The schedule depends on the model's timestep count, so it does not change when total_timesteps
+    does, and it continues smoothly when a run is resumed. The model's own schedule is replaced by a
+    constant at the end of each rollout, just before the update that uses it.
+    """
+
+    def __init__(self, initial: float, final: float, decay_steps: int):
         super().__init__()
         self.initial = initial
         self.final = final
+        self.decay_steps = decay_steps
+
+    def _on_rollout_end(self) -> None:
+        learning_rate = linear_decay(
+            self.initial, self.final, self.decay_steps, self.model.num_timesteps
+        )
+        self.model.lr_schedule = ConstantSchedule(learning_rate)
+
+    def _on_step(self) -> bool:
+        return True
+
+
+class EntropyCoefScheduleCallback(BaseCallback):
+    """Linearly decays the entropy coefficient from `initial` to `final`.
+
+    With `decay_steps` it decays over that many timesteps and then holds `final`. Without it, it decays
+    over training progress, which depends on total_timesteps and jumps when a run is resumed.
+    """
+
+    def __init__(self, initial: float, final: float, decay_steps: int | None = None):
+        super().__init__()
+        self.initial = initial
+        self.final = final
+        self.decay_steps = decay_steps
 
     def _on_rollout_start(self) -> None:
-        progress_remaining = self.model._current_progress_remaining
-        self.model.ent_coef = (
-            self.final + (self.initial - self.final) * progress_remaining
-        )
+        if self.decay_steps is not None:
+            self.model.ent_coef = linear_decay(
+                self.initial, self.final, self.decay_steps, self.model.num_timesteps
+            )
+        else:
+            progress_remaining = self.model._current_progress_remaining
+            self.model.ent_coef = (
+                self.final + (self.initial - self.final) * progress_remaining
+            )
         self.logger.record("train/ent_coef", self.model.ent_coef)
 
     def _on_step(self) -> bool:
