@@ -728,6 +728,11 @@ if __name__ == "__main__":
         help="Number of parallel environments (overrides n_envs in the config, default 1)",
     )
     parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        help="Total training timesteps (overrides total_timesteps in the config)",
+    )
+    parser.add_argument(
         "--experiments-dir",
         type=str,
         default="./experiments",
@@ -793,7 +798,8 @@ if __name__ == "__main__":
 
         train(
             boss=config["boss"],
-            total_timesteps=config.get("total_timesteps", 10_000_000),
+            total_timesteps=args.total_timesteps
+            or config.get("total_timesteps", 10_000_000),
             learning_rate=config.get("learning_rate", 5e-4),
             n_steps=config.get("n_steps", 2048),
             batch_size=config.get("batch_size", 512),
