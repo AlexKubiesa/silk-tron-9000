@@ -126,6 +126,7 @@ class TensorboardCallback(BaseCallback):
         self.attack_counts = deque(maxlen=buffer_size)
         self.hurt_counts = deque(maxlen=buffer_size)
         self.lowest_boss_hps = deque(maxlen=buffer_size)
+        self.max_boss_phases = deque(maxlen=buffer_size)
         self.reward_components = defaultdict(partial(deque, maxlen=buffer_size))
         self.action_proportions = defaultdict(partial(deque, maxlen=buffer_size))
         self.step_timings_ms = defaultdict(partial(deque, maxlen=buffer_size))
@@ -146,6 +147,7 @@ class TensorboardCallback(BaseCallback):
                 self.attack_counts.append(attack_count)
                 self.hurt_counts.append(hurt_count)
                 self.lowest_boss_hps.append(lowest_boss_hp)
+                self.max_boss_phases.append(info["max_boss_phase"])
 
                 self.logger.record(  # TODO: Probably cleaner to log these outside the loop
                     "episode/attack_count_mean", np.mean(self.attack_counts)
@@ -155,6 +157,14 @@ class TensorboardCallback(BaseCallback):
                     "episode/lowest_boss_hp_mean", np.mean(self.lowest_boss_hps)
                 )
                 self.logger.record("episode/highest_reward", self.highest_reward)
+                # Fraction of episodes that reached each phase. Phases are numbered from 0.
+                max_boss_phases = np.array(self.max_boss_phases)
+                self.logger.record(
+                    "episode/phase2_rate", np.mean(max_boss_phases >= 1)
+                )
+                self.logger.record(
+                    "episode/phase3_rate", np.mean(max_boss_phases >= 2)
+                )
 
                 # Track action proportions
                 if action_counts is not None and total_steps > 0:

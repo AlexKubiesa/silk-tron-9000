@@ -131,6 +131,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         self.hurt_count = 0
         self.episode_reward = 0.0
         self.lowest_boss_hp = game_state.boss_health
+        self.max_boss_phase = game_state.boss_phase
         self.prev_attack = 0
 
         # Action tracking
@@ -180,6 +181,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
 
         self.episode_reward += reward
         self.lowest_boss_hp = min(self.lowest_boss_hp, game_state.boss_health)
+        self.max_boss_phase = max(self.max_boss_phase, game_state.boss_phase)
 
         observation = self._make_observation(game_state)
 
@@ -407,6 +409,7 @@ class SilksongBossEnv(gym.Env[NDArray[np.float32], NDArray[np.integer]]):
         if episode_end:
             info["episode_reward"] = self.episode_reward
             info["lowest_boss_hp"] = self.lowest_boss_hp
+            info["max_boss_phase"] = self.max_boss_phase
             info["attack_count"] = self.attack_count
             info["heal_count"] = self.heal_count
             info["hurt_count"] = self.hurt_count

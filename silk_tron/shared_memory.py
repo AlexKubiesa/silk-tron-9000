@@ -12,6 +12,7 @@ import struct
 import subprocess
 import time
 import logging
+import xml.etree.ElementTree as ET
 
 import numpy as np
 
@@ -37,6 +38,50 @@ def _signal_handler(signum, frame):
 
 signal.signal(signal.SIGTERM, _signal_handler)
 signal.signal(signal.SIGINT, _signal_handler)
+
+
+# Unity's PlayerPrefs, shared by every game instance. The game stops at its first-launch language,
+# overscan and brightness menus, and so never connects, unless these are 1. The file has been
+# reset before, probably when several instances exited at once.
+UNITY_PREFS_PATH = (
+    Path.home() / ".config" / "unity3d" / "Team Cherry" / "Hollow Knight Silksong" / "prefs"
+)
+FIRST_LAUNCH_PREFS = ("GameLangSet", "VidOSSet", "VidBrightSet")
+
+
+def ensure_first_launch_prefs(path: Path = UNITY_PREFS_PATH) -> bool:
+    """Sets the prefs that skip the game's first-launch menus, keeping all the others.
+
+    A missing or unreadable file is replaced by one with just these prefs, as the game would
+    otherwise reset it anyway. Returns True if the file was written.
+    """
+    try:
+        root = ET.parse(path).getroot()
+    except (FileNotFoundError, ET.ParseError):
+        root = ET.Element("unity_prefs", version_major="1", version_minor="1")
+
+    prefs = {pref.get("name"): pref for pref in root.iter("pref")}
+    changed = False
+    for name in FIRST_LAUNCH_PREFS:
+        pref = prefs.get(name)
+        if pref is None:
+            pref = ET.SubElement(root, "pref", name=name)
+        if pref.get("type") != "int" or pref.text != "1":
+            pref.set("type", "int")
+            pref.text = "1"
+            changed = True
+
+    if not changed:
+        return False
+
+    # Several workers can launch games at once, so write to a temporary file and swap it in.
+    ET.indent(root, space="\t")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    ET.ElementTree(root).write(temp_path, encoding="unicode")
+    os.replace(temp_path, path)
+    print(f"Restored the game's first-launch prefs in {path}")
+    return True
 
 
 class GameTimeoutError(Exception):
@@ -540,6 +585,8 @@ class SilkSongSharedMemory:
         env["vblank_mode"] = "0"
 
         for attempt in range(1, self.LAUNCH_ATTEMPTS + 1):
+            ensure_first_launch_prefs()
+
             # Keep the game away from the trainer's terminal. With BepInEx's console
             # enabled, games attached to a terminal either fail to load BepInEx or hang
             # at startup, especially when several start at once.
