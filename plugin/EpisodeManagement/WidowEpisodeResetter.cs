@@ -28,6 +28,10 @@ public class WidowEpisodeResetter : EpisodeResetterBase
     // reset puts all of them back to how they were when the fight started.
     private readonly Dictionary<string, VariableSnapshot> _variablesAtFightStart = new Dictionary<string, VariableSnapshot>();
 
+    // Her fake death, just below P3 HP, moves her to a layer the hero's attacks don't hit. If the hero dies during it,
+    // she would stay there, unhittable, for every later episode.
+    private readonly Dictionary<Transform, int> _layersAtFightStart = new Dictionary<Transform, int>();
+
     private Vector3 _scaleAtFightStart = new Vector3(-1f, 1f, 1f);
 
     protected override Vector3 BossResetScale => _scaleAtFightStart;
@@ -77,6 +81,12 @@ public class WidowEpisodeResetter : EpisodeResetterBase
 
         _scaleAtFightStart = BossStateManager.CurrentBoss.transform.localScale;
 
+        _layersAtFightStart.Clear();
+        foreach (var transform in BossStateManager.CurrentBoss.GetComponentsInChildren<Transform>(true))
+        {
+            _layersAtFightStart[transform] = transform.gameObject.layer;
+        }
+
         _variablesAtFightStart.Clear();
         foreach (var bossFsm in BossStateManager.CurrentBoss.GetComponents<PlayMakerFSM>())
         {
@@ -105,6 +115,15 @@ public class WidowEpisodeResetter : EpisodeResetterBase
             }
 
             fsm.SetState("Idle");
+        }
+
+        foreach (var entry in _layersAtFightStart)
+        {
+            if (entry.Key != null && entry.Key.gameObject.layer != entry.Value)
+            {
+                Plugin.Logger.LogInfo($"[Widow] Restoring the layer of {entry.Key.name} from {entry.Key.gameObject.layer} to {entry.Value}");
+                entry.Key.gameObject.layer = entry.Value;
+            }
         }
     }
 
